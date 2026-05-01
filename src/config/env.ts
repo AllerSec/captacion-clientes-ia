@@ -17,6 +17,7 @@ const schema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('production'),
   LOG_LEVEL: z.enum(['trace','debug','info','warn','error']).default('info'),
   DRY_RUN: z.string().default('false').transform(v => v === 'true'),
+  KILL_SWITCH: z.string().transform(v => v === 'true').default('false'),
   TZ: z.string().default('Europe/Madrid'),
   DAILY_QUOTA_OVERRIDE: z.string().optional().transform(v => v ? parseInt(v) : undefined),
   SEND_MIN_INTERVAL_MIN: z.string().default('2').transform(v => parseInt(v)),

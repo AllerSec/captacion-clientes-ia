@@ -19,6 +19,12 @@ export async function runSender(opts: RunSenderOpts = {}): Promise<void> {
   try {
     const env = loadEnv();
     const log = logger.child({ job: 'sender' });
+
+    if (env.KILL_SWITCH) {
+      log.info('KILL_SWITCH active, skipping send');
+      return;
+    }
+
     const now = opts.now ?? new Date();
 
     const sentToday = await countSentToday();

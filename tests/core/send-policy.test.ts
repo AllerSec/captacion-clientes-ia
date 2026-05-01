@@ -6,7 +6,7 @@ const saturdayAt10 = new Date('2026-05-09T10:00:00+02:00');
 const tuesdayAt22 = new Date('2026-05-05T22:00:00+02:00');
 
 describe('dailyQuotaForDay', () => {
-  it('returns 10 in week 1', () => expect(dailyQuotaForDay(1)).toBe(10));
+  it('returns 5 in week 1 (cautious start)', () => expect(dailyQuotaForDay(1)).toBe(5));
   it('returns 20 in week 2', () => expect(dailyQuotaForDay(8)).toBe(20));
   it('returns 35 in week 3', () => expect(dailyQuotaForDay(15)).toBe(35));
   it('returns 50 in week 4+', () => expect(dailyQuotaForDay(22)).toBe(50));
@@ -37,7 +37,7 @@ describe('canSendNow', () => {
   });
 
   it('blocks if quota exhausted', () => {
-    expect(canSendNow({ ...okCtx, sentToday: 10 }).reason).toBe('quota_exhausted');
+    expect(canSendNow({ ...okCtx, sentToday: 5 }).reason).toBe('quota_exhausted');
   });
 
   it('blocks if last send too recent', () => {

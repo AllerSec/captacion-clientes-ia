@@ -6,6 +6,7 @@ import { runScraperAuto } from './jobs/scraper.js';
 import { runSender } from './jobs/sender.js';
 import { runWatcher } from './jobs/watcher.js';
 import { notifyError } from './core/health-monitor.js';
+import { runDailySummary } from './jobs/daily-summary.js';
 
 const env = loadEnv();
 const log = logger.child({ component: 'main' });
@@ -52,6 +53,12 @@ cron.schedule('*/30 * * * *', async () => {
   const watcherStale = Date.now() - lastWatcherRun > 3600_000;
   if (senderStale) await notifyError('error', 'Sender watchdog', `Sender has not run in >24h. Last: ${new Date(lastSenderRun).toISOString()}`);
   if (watcherStale) await notifyError('error', 'Watcher watchdog', `Watcher has not run in >1h. Last: ${new Date(lastWatcherRun).toISOString()}`);
+}, { timezone: env.TZ });
+
+// DAILY SUMMARY: every day at 21:00 ES
+cron.schedule('0 21 * * *', async () => {
+  log.info('daily summary tick');
+  try { await runDailySummary(); } catch (err) { log.error({ err }, 'daily summary failed'); }
 }, { timezone: env.TZ });
 
 log.info({ env: env.NODE_ENV, dryRun: env.DRY_RUN }, 'system started');

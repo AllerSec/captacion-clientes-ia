@@ -17,7 +17,7 @@ export interface PolicyResult {
 }
 
 export function dailyQuotaForDay(day: number): number {
-  if (day <= 7) return 10;
+  if (day <= 7) return 5;
   if (day <= 14) return 20;
   if (day <= 21) return 35;
   return 50;
