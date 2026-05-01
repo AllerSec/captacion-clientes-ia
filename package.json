@@ -18,7 +18,8 @@
     "variant:new": "tsx scripts/variant-new.ts",
     "stats": "tsx scripts/stats.ts",
     "health:check": "tsx scripts/health-check.ts",
-    "seed:variants": "tsx scripts/seed-variants.ts"
+    "seed:variants": "tsx scripts/seed-variants.ts",
+    "scraper:burst": "tsx -e \"import('./src/jobs/scraper.js').then(m => m.runScraperAuto())\""
   },
   "keywords": [],
   "author": "",

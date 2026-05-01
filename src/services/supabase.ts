@@ -139,3 +139,45 @@ export async function shouldFireAlert(key: string, cooldownHours = 6): Promise<b
   if (upErr) throw new Error(`shouldFireAlert write: ${upErr.message}`);
   return true;
 }
+
+export async function getRecentlyUsedQueries(daysBack = 30): Promise<Set<string>> {
+  const since = new Date(Date.now() - daysBack * 24 * 3600_000).toISOString();
+  const { data, error } = await getClient()
+    .from('query_history')
+    .select('query')
+    .gte('scraped_at', since);
+  if (error) throw new Error(`getRecentlyUsedQueries: ${error.message}`);
+  return new Set((data ?? []).map((r: any) => r.query));
+}
+
+export async function recordQueryUsed(query: string, tier: number, placesFound: number, uniqueInserted: number): Promise<void> {
+  const { error } = await getClient().from('query_history').insert({
+    query, tier, places_found: placesFound, unique_inserted: uniqueInserted,
+  });
+  if (error) throw new Error(`recordQueryUsed: ${error.message}`);
+}
+
+export async function getScraperState(): Promise<{ current_tier: number; last_burst_at: string | null }> {
+  const { data, error } = await getClient().from('scraper_state').select('*').eq('id', 1).single();
+  if (error) throw new Error(`getScraperState: ${error.message}`);
+  return data;
+}
+
+export async function setScraperTier(tier: number): Promise<void> {
+  const { error } = await getClient().from('scraper_state').update({ current_tier: tier }).eq('id', 1);
+  if (error) throw new Error(`setScraperTier: ${error.message}`);
+}
+
+export async function markBurstDone(): Promise<void> {
+  const { error } = await getClient().from('scraper_state').update({ last_burst_at: new Date().toISOString() }).eq('id', 1);
+  if (error) throw new Error(`markBurstDone: ${error.message}`);
+}
+
+export async function countReadyToSend(): Promise<number> {
+  const { count, error } = await getClient()
+    .from('leads')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'READY_TO_SEND');
+  if (error) throw new Error(`countReadyToSend: ${error.message}`);
+  return count ?? 0;
+}

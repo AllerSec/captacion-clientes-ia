@@ -9,6 +9,12 @@ const mockFetch = vi.fn();
 vi.mock('../../src/services/apify.js', () => ({ searchBusinesses: mockSearch }));
 vi.mock('../../src/services/supabase.js', () => ({
   upsertLead: mockUpsert, updateLead: mockUpdate, getLeadsByStatus: mockGetByStatus,
+  getRecentlyUsedQueries: vi.fn().mockResolvedValue(new Set()),
+  recordQueryUsed: vi.fn(),
+  getScraperState: vi.fn().mockResolvedValue({ current_tier: 1, last_burst_at: '2026-01-01' }),
+  setScraperTier: vi.fn(),
+  markBurstDone: vi.fn(),
+  countReadyToSend: vi.fn().mockResolvedValue(0),
 }));
 vi.mock('../../src/services/web-fetcher.js', () => ({ fetchWebsite: mockFetch }));
 vi.mock('../../src/lib/logger.js', () => ({

@@ -2,10 +2,9 @@ import cron from 'node-cron';
 import http from 'node:http';
 import { loadEnv } from './config/env.js';
 import { logger } from './lib/logger.js';
-import { runScraper } from './jobs/scraper.js';
+import { runScraperAuto } from './jobs/scraper.js';
 import { runSender } from './jobs/sender.js';
 import { runWatcher } from './jobs/watcher.js';
-import { getQueriesForToday } from './config/queries.js';
 import { notifyError } from './core/health-monitor.js';
 
 const env = loadEnv();
@@ -27,13 +26,8 @@ http.createServer((req, res) => {
 
 // SCRAPER: 07:00 ES every day
 cron.schedule('0 7 * * *', async () => {
-  const queries = getQueriesForToday();
-  if (queries.length === 0) {
-    log.info('no queries scheduled for today');
-    return;
-  }
-  log.info({ queries }, 'scraper tick');
-  try { await runScraper(queries); } catch (err) { log.error({ err }, 'scraper failed'); }
+  log.info('scraper auto tick');
+  try { await runScraperAuto(); } catch (err) { log.error({ err }, 'scraper failed'); }
 }, { timezone: env.TZ });
 
 // SENDER: every 3 minutes (policy gate handles workday/hours/quota)
