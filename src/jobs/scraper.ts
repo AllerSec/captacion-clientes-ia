@@ -32,33 +32,46 @@ export async function runScraper(queries: string[]): Promise<void> {
       let web_score = 100;
       let web_issues: string[] = [];
       let visual: { looksDated?: boolean; era?: string; notes?: string } = {};
-      if (lead.website) {
-        const fetched = await fetchWebsite(lead.website);
-        const r = analyzeHtml(fetched);
-        web_score = r.score;
-        web_issues = r.issues;
-        // NEW: try visual analysis if the site is reachable
-        if (fetched.status >= 200 && fetched.status < 400) {
-          try {
-            const shot = await captureScreenshot(lead.website);
-            if (shot.base64) {
-              const j = await analyzeScreenshot(shot.base64);
-              visual = { looksDated: j.looksDated, era: j.designEra, notes: j.notes };
+      try {
+        if (lead.website) {
+          const fetched = await fetchWebsite(lead.website);
+          const r = analyzeHtml(fetched);
+          web_score = r.score;
+          web_issues = r.issues;
+          // Visual analysis if site reachable. Hard 25s timeout per lead.
+          if (fetched.status >= 200 && fetched.status < 400) {
+            try {
+              const shot = await Promise.race([
+                captureScreenshot(lead.website!),
+                new Promise<{ base64: null; error: string }>((_, rej) =>
+                  setTimeout(() => rej(new Error('screenshot+visual timeout')), 25000)
+                ),
+              ]);
+              if (shot.base64) {
+                const j = await analyzeScreenshot(shot.base64);
+                visual = { looksDated: j.looksDated, era: j.designEra, notes: j.notes };
+              }
+            } catch (err) {
+              log.warn({ err: (err as Error).message, leadId: lead.id }, 'visual analysis failed');
             }
-          } catch (err) {
-            log.warn({ err, leadId: lead.id }, 'visual analysis failed');
           }
+        } else {
+          web_issues = ['no_website'];
         }
-      } else {
-        web_issues = ['no_website'];
+      } catch (err) {
+        log.warn({ err: (err as Error).message, leadId: lead.id }, 'analysis failed; continuing');
       }
-      await updateLead(lead.id, {
-        status: 'ANALYZED', web_score, web_issues,
-        web_analyzed_at: new Date().toISOString(),
-        web_visual_dated: visual.looksDated ?? null,
-        web_visual_era: visual.era ?? null,
-        web_visual_notes: visual.notes ?? null,
-      });
+      try {
+        await updateLead(lead.id, {
+          status: 'ANALYZED', web_score, web_issues,
+          web_analyzed_at: new Date().toISOString(),
+          web_visual_dated: visual.looksDated ?? null,
+          web_visual_era: visual.era ?? null,
+          web_visual_notes: visual.notes ?? null,
+        });
+      } catch (err) {
+        log.error({ err, leadId: lead.id }, 'updateLead failed');
+      }
     }
 
     // Filter ANALYZED
