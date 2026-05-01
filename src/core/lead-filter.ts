@@ -29,13 +29,13 @@ export function qualifyLead(l: LeadInput): QualifyResult {
   if (l.rating == null || l.rating < 4.0) {
     return { qualified: false, reason: 'low_rating' };
   }
-  if (l.review_count == null || l.review_count < 20) {
+  if (l.review_count == null || l.review_count < 15) {
     return { qualified: false, reason: 'few_reviews' };
   }
   if (BLACKLIST.some(rx => rx.test(l.business_name))) {
     return { qualified: false, reason: 'blacklisted' };
   }
-  if (l.website && (l.web_score == null || l.web_score < 50)) {
+  if (l.website && (l.web_score == null || l.web_score < 25)) {
     return { qualified: false, reason: 'web_ok' };
   }
   return { qualified: true };

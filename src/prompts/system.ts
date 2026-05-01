@@ -36,11 +36,8 @@ USO DE NEGRITAS (HTML <b>):
 - NUNCA negrita en saludo, despedida, ni nombre del negocio.
 - Si dudas, NO uses negrita.
 
-EJEMPLO DE OUTPUT BUENO:
-{
-  "subject": "una idea para la web de la Clínica Dental García",
-  "body": "<p>Hola,</p><p>Vi que la Clínica Dental García en Bilbao tiene 4,8 con 130 reseñas — se nota que tenéis pacientes contentos. Le eché un vistazo a la web y vi que <b>no se ve bien en el móvil y tarda bastante en cargar</b>, cosas que hoy día penalizan en Google y hacen que muchos pacientes nuevos se vayan antes de llamar.</p><p>Si os interesa, <b>puedo prepararos una propuesta visual de cómo podría quedar la web, sin coste y sin compromiso</b>. Si os gusta lo que veis, ya hablamos; si no, no os molesto más.</p><p>¿Os interesa que os la mande?</p><p>Unax — unaxaller.com — Irún</p>"
-}
+EJEMPLO DE BUEN EMAIL (subject + body):
+- subject: "una idea para la web de la Clínica Dental García"
+- body: "<p>Hola,</p><p>Vi que la Clínica Dental García en Bilbao tiene 4,8 con 130 reseñas — se nota que tenéis pacientes contentos. Le eché un vistazo a la web y vi que <b>no se ve bien en el móvil y tarda bastante en cargar</b>, cosas que hoy día penalizan en Google y hacen que muchos pacientes nuevos se vayan antes de llamar.</p><p>Si os interesa, <b>puedo prepararos una propuesta visual de cómo podría quedar la web, sin coste y sin compromiso</b>. Si os gusta lo que veis, ya hablamos; si no, no os molesto más.</p><p>¿Os interesa que os la mande?</p><p>Unax — unaxaller.com — Irún</p>"
 
-DEVUELVE EXACTAMENTE UN OBJETO JSON con dos campos: "subject" (string, sin emojis ni mayúsculas marketing) y "body" (string HTML con <p> y <b> permitidos, NADA MÁS).
-NO incluyas el JSON dentro de markdown code fences. SOLO el JSON crudo.`;
+Llama a la tool send_email_draft con los campos subject y body. El subject sin emojis ni mayúsculas marketing; el body en HTML con sólo <p> y <b>.`;

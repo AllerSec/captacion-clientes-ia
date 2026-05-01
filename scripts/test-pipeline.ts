@@ -13,7 +13,11 @@ async function main() {
 
   console.log('[dry-run] running sender (5 leads max)...');
   for (let i = 0; i < 5; i++) {
-    await runSender({ now: new Date('2026-05-05T10:00:00+02:00') });
+    try {
+      await runSender({ now: new Date('2026-05-05T10:00:00+02:00') });
+    } catch (err) {
+      console.error(`[dry-run] sender iteration ${i + 1} failed:`, err instanceof Error ? err.message : err);
+    }
   }
   console.log('Done. Check the logs above for generated emails.');
 }

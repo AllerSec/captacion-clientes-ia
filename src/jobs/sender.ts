@@ -83,6 +83,8 @@ export async function runSender(opts: RunSenderOpts = {}): Promise<void> {
 
     if (env.DRY_RUN) {
       log.info({ leadId: lead.id, subject: generated.subject, body: generated.body }, '[DRY_RUN] would send');
+      // Mark this lead so subsequent dry-run iterations pick a different one.
+      await updateLead(lead.id, { status: 'SKIPPED', notes: 'dry_run_preview' });
       return;
     }
 

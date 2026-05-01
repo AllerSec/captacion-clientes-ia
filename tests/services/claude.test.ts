@@ -13,9 +13,9 @@ vi.mock('../../src/config/env.js', () => ({
 describe('claude service', () => {
   beforeEach(() => mockCreate.mockReset());
 
-  it('generateEmail returns parsed JSON', async () => {
+  it('generateEmail returns parsed tool_use output', async () => {
     mockCreate.mockResolvedValue({
-      content: [{ type: 'text', text: '{"subject":"hola","body":"<p>hola</p>"}' }],
+      content: [{ type: 'tool_use', name: 'send_email_draft', input: { subject: 'hola', body: '<p>hola</p>' } }],
     });
     const { generateEmail } = await import('../../src/services/claude.js');
     const out = await generateEmail({

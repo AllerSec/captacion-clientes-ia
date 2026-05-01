@@ -23,7 +23,7 @@ export async function generateEmail(input: GenerateEmailInput): Promise<Generate
   const env = loadEnv();
   const resp = await getClient().messages.create({
     model: env.ANTHROPIC_MODEL,
-    max_tokens: 800,
+    max_tokens: 1200,
     system: [
       {
         type: 'text',
@@ -31,19 +31,31 @@ export async function generateEmail(input: GenerateEmailInput): Promise<Generate
         cache_control: { type: 'ephemeral' },
       } as any,
     ],
+    tools: [
+      {
+        name: 'send_email_draft',
+        description: 'Devuelve el email generado en formato estructurado.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            subject: { type: 'string', description: 'Asunto del email' },
+            body: { type: 'string', description: 'Cuerpo del email en HTML (solo <p> y <b>)' },
+          },
+          required: ['subject', 'body'],
+        },
+      },
+    ],
+    tool_choice: { type: 'tool', name: 'send_email_draft' },
     messages: [{ role: 'user', content: input.userPrompt }],
   });
 
-  const textBlock = resp.content.find(b => b.type === 'text');
-  if (!textBlock || textBlock.type !== 'text') throw new Error('Claude returned no text');
-  const text = textBlock.text.trim();
-
-  // Extract JSON from response (might be wrapped in code fences)
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error(`Claude response not JSON: ${text.slice(0, 200)}`);
-  const parsed = JSON.parse(jsonMatch[0]);
+  const toolUse = resp.content.find(b => b.type === 'tool_use');
+  if (!toolUse || toolUse.type !== 'tool_use') {
+    throw new Error('Claude did not use the send_email_draft tool');
+  }
+  const parsed = toolUse.input as { subject?: unknown; body?: unknown };
   if (typeof parsed.subject !== 'string' || typeof parsed.body !== 'string') {
-    throw new Error('Claude JSON missing subject/body');
+    throw new Error('Claude tool output missing subject/body');
   }
   return { subject: parsed.subject, body: parsed.body };
 }

@@ -11,6 +11,8 @@ describe('loadEnv', () => {
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'k';
     process.env.APIFY_TOKEN = 't';
     process.env.ANTHROPIC_API_KEY = 'a';
+    delete process.env.ANTHROPIC_MODEL;
+    delete process.env.DRY_RUN;
     process.env.GMAIL_CLIENT_ID = 'c';
     process.env.GMAIL_CLIENT_SECRET = 's';
     process.env.GMAIL_REFRESH_TOKEN = 'r';
