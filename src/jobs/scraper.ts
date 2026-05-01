@@ -84,6 +84,8 @@ export async function runScraper(queries: string[]): Promise<void> {
         review_count: lead.review_count ?? null,
         website: lead.website ?? null,
         web_score: lead.web_score ?? null,
+        web_visual_dated: (lead as any).web_visual_dated ?? null,
+        web_visual_era: (lead as any).web_visual_era ?? null,
       });
       await updateLead(lead.id, {
         status: q.qualified ? 'READY_TO_SEND' : 'SKIPPED',

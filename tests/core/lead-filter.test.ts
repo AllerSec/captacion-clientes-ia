@@ -32,11 +32,32 @@ describe('qualifyLead', () => {
     expect(qualifyLead({ ...base, business_name: 'Quirónsalud' }).qualified).toBe(false);
   });
 
-  it('qualifies website with high web_score', () => {
+  it('qualifies website with high web_score (serious technical issues)', () => {
     expect(qualifyLead({ ...base, website: 'https://x.com', web_score: 70 }).qualified).toBe(true);
   });
 
-  it('rejects website with good web_score', () => {
+  it('rejects website with low web_score and no visual antiquity', () => {
     expect(qualifyLead({ ...base, website: 'https://x.com', web_score: 20 }).qualified).toBe(false);
+  });
+
+  it('rejects website that looks moderately dated but era is recent (2018-2020)', () => {
+    expect(qualifyLead({
+      ...base, website: 'https://x.com', web_score: 20,
+      web_visual_dated: true, web_visual_era: '2018-2020',
+    }).qualified).toBe(false);
+  });
+
+  it('qualifies website that is visually ancient (pre-2016)', () => {
+    expect(qualifyLead({
+      ...base, website: 'https://x.com', web_score: 20,
+      web_visual_dated: true, web_visual_era: 'early 2010s',
+    }).qualified).toBe(true);
+  });
+
+  it('qualifies visually ancient with descriptive era like "antes de la era móvil"', () => {
+    expect(qualifyLead({
+      ...base, website: 'https://x.com', web_score: 30,
+      web_visual_dated: true, web_visual_era: 'antes de la era móvil',
+    }).qualified).toBe(true);
   });
 });

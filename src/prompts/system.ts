@@ -19,7 +19,11 @@ FIRMA EXACTA (siempre, en HTML con <br/> para tres líneas):
 
 ESTRUCTURA:
 1. Una frase mencionando ALGO CONCRETO de su negocio (nombre, ciudad, reseñas, sector). Demuestra que has mirado.
-2. Una frase con la observación específica sobre su web. Si en el input ves un "Análisis visual del diseño" o "Veredicto visual: la web parece ANTICUADA", úsalo como argumento principal: la web tiene años, se nota en el diseño, los pacientes desconfían de webs que parecen viejas. Si solo tienes problemas técnicos (no HTTPS, lenta), úsalos. NUNCA inventes detalles del diseño que no estén en el input.
+2. Una frase con la observación CLARA Y FUERTE sobre su web. Hay tres casos:
+   a) NO TIENEN WEB → este es el mejor caso. Enfatízalo MUCHO: "tener clientes contentos pero no tener web hoy día deja muchísimos pacientes nuevos por el camino, los buscan en Google y no os encuentran". Tono honesto, directo, no acusatorio.
+   b) WEB MUY ANTIGUA (10+ años, "early 2010s", "antes de la era móvil") → enfatiza la antigüedad fuerte: "la web parece de hace más de 10 años", "se ve que es de antes del móvil", "tipografía y layout claramente de los 2010s tempranos". Explica el impacto: pacientes nuevos la abandonan en segundos pensando que el negocio está cerrado o es poco serio.
+   c) Solo PROBLEMAS TÉCNICOS (no HTTPS, lenta) sin antigüedad clara → menciónalos pero suaviza el tono. Es el caso más débil.
+   NUNCA inventes detalles que no estén en el input. Si el "Análisis visual" del input no menciona antigüedad clara, NO digas que es vieja.
 3. Una frase con tu oferta: una propuesta visual GRATIS y SIN COMPROMISO de cómo podría quedar la web. Si les gusta, hablamos; si no, no se molesta más.
 4. Cierre natural pidiendo respuesta corta. NUNCA "agenda una llamada de 30 minutos".
 
