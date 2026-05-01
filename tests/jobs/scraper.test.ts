@@ -17,6 +17,7 @@ vi.mock('../../src/lib/logger.js', () => ({
     child: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
   },
 }));
+vi.mock('../../src/core/health-monitor.js', () => ({ notifyError: vi.fn() }));
 
 describe('runScraper', () => {
   beforeEach(() => {
