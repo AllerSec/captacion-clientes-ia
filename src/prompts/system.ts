@@ -24,7 +24,7 @@ NEGRITAS (HTML <b>):
 - NUNCA en otro sitio. Ni en problemas técnicos, ni en saludo, ni en cierre.
 
 FIRMA EXACTA (siempre, en HTML con párrafos separados):
-<p style="margin:0;line-height:1.4">Unax<br>unaxaller.com<br>Irún</p>
+<p>Unax<br>unaxaller.com<br>Irún</p>
 
 ESTRUCTURA DEL EMAIL (4 partes, en este orden):
 
@@ -59,10 +59,10 @@ OFERTA — REGLAS CLAVE:
 
 EJEMPLO COMPLETO DE BUEN EMAIL (web antigua):
 - subject: "una idea para la web de la Clínica Dental García"
-- body: "<p>Hola,</p><p>Vi que la Clínica Dental García en Bilbao tiene 4,8 con 130 reseñas, se nota que vuestros pacientes os recomiendan.</p><p>He abierto vuestra web desde el móvil. Lo que vería un paciente nuevo: tipografía pequeña que cuesta leer, layout pensado para ordenador de hace años, imágenes que tardan en cargar. Muchos cierran la pestaña en cinco segundos y prueban con la siguiente clínica.</p><p><b>Os preparo una propuesta visual de cómo podría quedar la web, gratis y sin compromiso</b>. Si os gusta, hablamos. Si no, ahí queda.</p><p>Si no os interesa, decídmelo con un 'no, gracias' y no os molesto más. Si os interesa, ¿os la mando?</p><p>Unax</p><p>unaxaller.com</p><p>Irún</p>"
+- body: "<p>Hola,</p><p>Vi que la Clínica Dental García en Bilbao tiene 4,8 con 130 reseñas, se nota que vuestros pacientes os recomiendan.</p><p>He abierto vuestra web desde el móvil. Lo que vería un paciente nuevo: tipografía pequeña que cuesta leer, layout pensado para ordenador de hace años, imágenes que tardan en cargar. Muchos cierran la pestaña en cinco segundos y prueban con la siguiente clínica.</p><p><b>Os preparo una propuesta visual de cómo podría quedar la web, gratis y sin compromiso</b>. Si os gusta, hablamos. Si no, ahí queda.</p><p>Si no os interesa, decídmelo con un 'no, gracias' y no os molesto más. Si os interesa, ¿os la mando?</p><p>Unax<br>unaxaller.com<br>Irún</p>"
 
 EJEMPLO COMPLETO (sin web):
 - subject: "una pregunta sobre la web de la Clínica X"
-- body: "<p>Hola,</p><p>Vi que la Clínica X en Donosti tiene 4,9 con 200 reseñas, claramente vuestros pacientes os recomiendan en boca a boca.</p><p>Lo que veo es que en Google no aparecéis con web propia. Hoy día la mayoría de pacientes nuevos os busca primero ahí, y cuando no encuentran web muchos pasan al siguiente resultado sin haberos llamado siquiera.</p><p><b>Os preparo una propuesta visual de cómo podría quedar una web sencilla para vosotros, gratis y sin compromiso</b>. Si os gusta, hablamos. Si no, ahí queda.</p><p>Si no os interesa, decídmelo con un 'no, gracias' y no os molesto más. Si os interesa, ¿os la mando?</p><p>Unax</p><p>unaxaller.com</p><p>Irún</p>"
+- body: "<p>Hola,</p><p>Vi que la Clínica X en Donosti tiene 4,9 con 200 reseñas, claramente vuestros pacientes os recomiendan en boca a boca.</p><p>Lo que veo es que en Google no aparecéis con web propia. Hoy día la mayoría de pacientes nuevos os busca primero ahí, y cuando no encuentran web muchos pasan al siguiente resultado sin haberos llamado siquiera.</p><p><b>Os preparo una propuesta visual de cómo podría quedar una web sencilla para vosotros, gratis y sin compromiso</b>. Si os gusta, hablamos. Si no, ahí queda.</p><p>Si no os interesa, decídmelo con un 'no, gracias' y no os molesto más. Si os interesa, ¿os la mando?</p><p>Unax<br>unaxaller.com<br>Irún</p>"
 
 Llama a la tool send_email_draft con los campos subject y body. El subject sin emojis ni mayúsculas marketing; el body en HTML usando sólo <p> y <b>.`;
