@@ -113,6 +113,17 @@ export async function getEmailByThread(thread_id: string) {
   return data?.[0] ?? null;
 }
 
+export async function getEmailByLead(leadId: string) {
+  const { data, error } = await getClient()
+    .from('emails_sent')
+    .select('*')
+    .eq('lead_id', leadId)
+    .order('sent_at', { ascending: false })
+    .limit(1);
+  if (error) throw new Error(`getEmailByLead: ${error.message}`);
+  return data?.[0] ?? null;
+}
+
 export async function shouldFireAlert(key: string, cooldownHours = 6): Promise<boolean> {
   const { data, error } = await getClient()
     .from('alert_dedup').select('last_sent').eq('key', key).limit(1);
