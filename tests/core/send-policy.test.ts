@@ -44,3 +44,36 @@ describe('canSendNow', () => {
     expect(canSendNow({ ...okCtx, minutesSinceLastSend: 1 }).reason).toBe('too_soon');
   });
 });
+
+describe('canSendNow timezone independence', () => {
+  it('uses Europe/Madrid regardless of runtime TZ', () => {
+    // Same Spain 10:00 expressed two ways:
+    const sameInstantViaUtc = new Date('2026-05-05T08:00:00Z'); // 10:00 in CEST
+    expect(canSendNow({
+      now: sameInstantViaUtc,
+      sentToday: 0,
+      daysSinceFirstSend: 1,
+      minutesSinceLastSend: 999,
+      minIntervalMin: 2,
+      maxIntervalMin: 5,
+    }).allowed).toBe(true);
+  });
+
+  it('honors explicit timeZone override', () => {
+    // 10:00 UTC = 12:00 Madrid (still in hours), but in UTC tz it's 10:00 (in hours).
+    // Use a time that is in-hours in UTC but NOT in Madrid: 14:00 UTC = 16:00 Madrid (still in 2nd block).
+    // So pick: 14:00 UTC = 14:00 in UTC tz (NOT in hours since gap 13:30-16). Should block.
+    const date = new Date('2026-05-05T14:00:00Z');
+    const r = canSendNow({
+      now: date,
+      sentToday: 0,
+      daysSinceFirstSend: 1,
+      minutesSinceLastSend: 999,
+      minIntervalMin: 2,
+      maxIntervalMin: 5,
+      timeZone: 'UTC',
+    });
+    expect(r.allowed).toBe(false);
+    expect(r.reason).toBe('outside_hours');
+  });
+});
