@@ -85,54 +85,91 @@ function getTierForQuery(q: string): number {
   return 1;
 }
 
+async function analyzeOneLead(lead: any): Promise<void> {
+  const log = logger.child({ job: 'scraper' });
+
+  // PRE-FILTER: discard obvious non-leads BEFORE wasting screenshot + visual analysis.
+  // (rating, reviews, blacklist, missing email, invalid email).
+  const earlyCheck = qualifyLead({
+    business_name: lead.business_name,
+    email: lead.email ?? null,
+    rating: lead.rating ?? null,
+    review_count: lead.review_count ?? null,
+    website: lead.website ?? null,
+    web_score: 100, // assume worst-case so this gate doesn't reject on web alone
+    web_visual_dated: null,
+    web_visual_era: null,
+  });
+  if (!earlyCheck.qualified && earlyCheck.reason !== 'web_acceptable') {
+    // Reason is one of: no_email, invalid_email, low_rating, few_reviews, blacklisted.
+    // None of these can be fixed by analysis — skip directly.
+    try {
+      await updateLead(lead.id, { status: 'SKIPPED', notes: earlyCheck.reason ?? 'pre_filtered' });
+    } catch (err) {
+      log.error({ err, leadId: lead.id }, 'updateLead failed (early skip)');
+    }
+    return;
+  }
+
+  let web_score = 100;
+  let web_issues: string[] = [];
+  let visual: { looksDated?: boolean; era?: string; notes?: string } = {};
+  try {
+    if (lead.website) {
+      const fetched = await fetchWebsite(lead.website);
+      const r = analyzeHtml(fetched);
+      web_score = r.score;
+      web_issues = r.issues;
+      if (fetched.status >= 200 && fetched.status < 400) {
+        try {
+          const shot = await Promise.race([
+            captureScreenshot(lead.website!),
+            new Promise<{ base64: null; error: string }>((_, rej) =>
+              setTimeout(() => rej(new Error('screenshot+visual timeout')), 25000)
+            ),
+          ]);
+          if (shot.base64) {
+            const j = await analyzeScreenshot(shot.base64);
+            visual = { looksDated: j.looksDated, era: j.designEra, notes: j.notes };
+          }
+        } catch (err) {
+          log.warn({ err: (err as Error).message, leadId: lead.id }, 'visual analysis failed');
+        }
+      }
+    } else {
+      web_issues = ['no_website'];
+    }
+  } catch (err) {
+    log.warn({ err: (err as Error).message, leadId: lead.id }, 'analysis failed; continuing');
+  }
+  try {
+    await updateLead(lead.id, {
+      status: 'ANALYZED', web_score, web_issues,
+      web_analyzed_at: new Date().toISOString(),
+      web_visual_dated: visual.looksDated ?? null,
+      web_visual_era: visual.era ?? null,
+      web_visual_notes: visual.notes ?? null,
+    });
+  } catch (err) {
+    log.error({ err, leadId: lead.id }, 'updateLead failed');
+  }
+}
+
+/** Process leads N at a time. Visual analysis is the bottleneck (~5s each), so parallelism helps a lot. */
+async function processInBatches<T>(items: T[], batchSize: number, fn: (item: T) => Promise<void>): Promise<void> {
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    await Promise.all(batch.map(fn));
+  }
+}
+
 async function analyzeAndFilter(): Promise<void> {
   const log = logger.child({ job: 'scraper' });
-  // Analyze NEW leads
-  const news = await getLeadsByStatus('NEW', 200);
-  for (const lead of news) {
-    let web_score = 100;
-    let web_issues: string[] = [];
-    let visual: { looksDated?: boolean; era?: string; notes?: string } = {};
-    try {
-      if (lead.website) {
-        const fetched = await fetchWebsite(lead.website);
-        const r = analyzeHtml(fetched);
-        web_score = r.score;
-        web_issues = r.issues;
-        if (fetched.status >= 200 && fetched.status < 400) {
-          try {
-            const shot = await Promise.race([
-              captureScreenshot(lead.website!),
-              new Promise<{ base64: null; error: string }>((_, rej) =>
-                setTimeout(() => rej(new Error('screenshot+visual timeout')), 25000)
-              ),
-            ]);
-            if (shot.base64) {
-              const j = await analyzeScreenshot(shot.base64);
-              visual = { looksDated: j.looksDated, era: j.designEra, notes: j.notes };
-            }
-          } catch (err) {
-            log.warn({ err: (err as Error).message, leadId: lead.id }, 'visual analysis failed');
-          }
-        }
-      } else {
-        web_issues = ['no_website'];
-      }
-    } catch (err) {
-      log.warn({ err: (err as Error).message, leadId: lead.id }, 'analysis failed; continuing');
-    }
-    try {
-      await updateLead(lead.id, {
-        status: 'ANALYZED', web_score, web_issues,
-        web_analyzed_at: new Date().toISOString(),
-        web_visual_dated: visual.looksDated ?? null,
-        web_visual_era: visual.era ?? null,
-        web_visual_notes: visual.notes ?? null,
-      });
-    } catch (err) {
-      log.error({ err, leadId: lead.id }, 'updateLead failed');
-    }
-  }
+  // Analyze NEW leads. Big batch up to 1000, parallelism 3.
+  const news = await getLeadsByStatus('NEW', 1000);
+  log.info({ pending: news.length }, 'analyze: starting');
+  await processInBatches(news, 3, analyzeOneLead);
+  log.info({ analyzed: news.length }, 'analyze: done');
 
   // Filter ANALYZED
   const analyzed = await getLeadsByStatus('ANALYZED', 500);
