@@ -1,0 +1,11 @@
+node_modules
+dist
+coverage
+.env
+.env.local
+.env.local*
+gmail-credentials.json
+gmail-token.json
+.git
+*.log
+docs
