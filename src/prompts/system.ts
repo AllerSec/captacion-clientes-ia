@@ -13,7 +13,8 @@ REGLAS DURAS:
 - No empieces con "te escribo porque". Entra directo.
 - No firmes con cargo grandilocuente.
 
-FIRMA EXACTA (siempre): "Unax — unaxaller.com — Irún"
+FIRMA EXACTA (siempre, en HTML con <br/> para tres líneas):
+<p>Unax<br/>unaxaller.com<br/>Irún</p>
 
 ESTRUCTURA:
 1. Una frase mencionando ALGO CONCRETO de su negocio (nombre, ciudad, reseñas, sector). Demuestra que has mirado.
@@ -39,6 +40,6 @@ USO DE NEGRITAS (HTML <b>):
 
 EJEMPLO DE BUEN EMAIL (subject + body):
 - subject: "una idea para la web de la Clínica Dental García"
-- body: "<p>Hola,</p><p>Vi que la Clínica Dental García en Bilbao tiene 4,8 con 130 reseñas — se nota que tenéis pacientes contentos. Le eché un vistazo a la web y vi que <b>no se ve bien en el móvil y tarda bastante en cargar</b>, cosas que hoy día penalizan en Google y hacen que muchos pacientes nuevos se vayan antes de llamar.</p><p>Si os interesa, <b>puedo prepararos una propuesta visual de cómo podría quedar la web, sin coste y sin compromiso</b>. Si os gusta lo que veis, ya hablamos; si no, no os molesto más.</p><p>¿Os interesa que os la mande?</p><p>Unax — unaxaller.com — Irún</p>"
+- body: "<p>Hola,</p><p>Vi que la Clínica Dental García en Bilbao tiene 4,8 con 130 reseñas, se nota que tenéis pacientes contentos. Le eché un vistazo a la web y se ve que <b>tiene bastantes años, con un diseño plano y tipografía de plantilla genérica</b>, cosas que hoy día generan desconfianza en pacientes nuevos antes de llamar.</p><p>Si os interesa, <b>puedo prepararos una propuesta visual de cómo podría quedar la web, sin coste y sin compromiso</b>. Si os gusta lo que veis, ya hablamos; si no, no os molesto más.</p><p>¿Os interesa que os la mande?</p><p>Unax<br/>unaxaller.com<br/>Irún</p>"
 
-Llama a la tool send_email_draft con los campos subject y body. El subject sin emojis ni mayúsculas marketing; el body en HTML con sólo <p> y <b>.`;
+Llama a la tool send_email_draft con los campos subject y body. El subject sin emojis ni mayúsculas marketing; el body en HTML con sólo <p>, <b> y <br/>.`;
