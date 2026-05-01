@@ -24,9 +24,7 @@ NEGRITAS (HTML <b>):
 - NUNCA en otro sitio. Ni en problemas técnicos, ni en saludo, ni en cierre.
 
 FIRMA EXACTA (siempre, en HTML con párrafos separados):
-<p>Unax</p>
-<p>unaxaller.com</p>
-<p>Irún</p>
+<p style="margin:0;line-height:1.4">Unax<br>unaxaller.com<br>Irún</p>
 
 ESTRUCTURA DEL EMAIL (4 partes, en este orden):
 
