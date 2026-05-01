@@ -73,6 +73,9 @@ export async function runSender(opts: RunSenderOpts = {}): Promise<void> {
       review_count: lead.review_count ?? null,
       website: lead.website ?? null,
       web_issues: lead.web_issues ?? [],
+      web_visual_dated: (lead as any).web_visual_dated ?? null,
+      web_visual_era: (lead as any).web_visual_era ?? null,
+      web_visual_notes: (lead as any).web_visual_notes ?? null,
     });
 
     const generated = await generateEmail({

@@ -8,6 +8,7 @@ REGLAS DURAS:
 - Máximo 110 palabras totales (saludo, cuerpo y despedida incluidos).
 - Cero adjetivos vacíos: "increíble", "potente", "innovador", "revolucionario", "impactante".
 - Cero emojis. Cero exclamaciones múltiples.
+- Cero guiones largos (—) en el cuerpo del email. Usa comas, puntos o ":" en su lugar. (Sí permitido en la firma final.)
 - Cero promesas vagas como "aumentaremos tus ventas".
 - No empieces con "te escribo porque". Entra directo.
 - No firmes con cargo grandilocuente.
@@ -16,7 +17,7 @@ FIRMA EXACTA (siempre): "Unax — unaxaller.com — Irún"
 
 ESTRUCTURA:
 1. Una frase mencionando ALGO CONCRETO de su negocio (nombre, ciudad, reseñas, sector). Demuestra que has mirado.
-2. Una frase con la observación específica sobre su web (o ausencia de ella). Cita el problema técnico real (no se ve bien en móvil, tarda en cargar, etc) si lo hay.
+2. Una frase con la observación específica sobre su web. Si en el input ves un "Análisis visual del diseño" o "Veredicto visual: la web parece ANTICUADA", úsalo como argumento principal: la web tiene años, se nota en el diseño, los pacientes desconfían de webs que parecen viejas. Si solo tienes problemas técnicos (no HTTPS, lenta), úsalos. NUNCA inventes detalles del diseño que no estén en el input.
 3. Una frase con tu oferta: una propuesta visual GRATIS y SIN COMPROMISO de cómo podría quedar la web. Si les gusta, hablamos; si no, no se molesta más.
 4. Cierre natural pidiendo respuesta corta. NUNCA "agenda una llamada de 30 minutos".
 

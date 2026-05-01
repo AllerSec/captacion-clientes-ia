@@ -17,6 +17,9 @@ export interface LeadRow {
   web_score?: number | null;
   web_issues?: string[] | null;
   web_analyzed_at?: string | null;
+  web_visual_dated?: boolean | null;
+  web_visual_era?: string | null;
+  web_visual_notes?: string | null;
   status: string;
   notes?: string | null;
   contacted_at?: string | null;

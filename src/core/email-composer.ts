@@ -6,6 +6,9 @@ export interface ComposerInput {
   review_count: number | null;
   website: string | null;
   web_issues: string[];
+  web_visual_dated?: boolean | null;
+  web_visual_era?: string | null;
+  web_visual_notes?: string | null;
 }
 
 export function buildUserPrompt(input: ComposerInput): string {
@@ -17,7 +20,12 @@ export function buildUserPrompt(input: ComposerInput): string {
   ];
   if (input.website) {
     lines.push(`Web: ${input.website}`);
-    lines.push(`Problemas detectados en su web: ${JSON.stringify(input.web_issues)}`);
+    lines.push(`Problemas técnicos detectados: ${JSON.stringify(input.web_issues)}`);
+    if (input.web_visual_notes) {
+      lines.push(`Análisis visual del diseño: ${input.web_visual_notes}`);
+      if (input.web_visual_era) lines.push(`Época estimada del diseño: ${input.web_visual_era}`);
+      if (input.web_visual_dated) lines.push(`Veredicto visual: la web parece ANTICUADA.`);
+    }
   } else {
     lines.push(`No tienen web propia (no aparece en su ficha de Google).`);
   }

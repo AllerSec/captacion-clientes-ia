@@ -60,6 +60,58 @@ export async function generateEmail(input: GenerateEmailInput): Promise<Generate
   return { subject: parsed.subject, body: parsed.body };
 }
 
+export interface VisualJudgment {
+  looksDated: boolean;
+  designEra: string;        // e.g. "early 2010s", "modern", "around 2018"
+  notes: string;            // free-form short observation in Spanish, e.g. "diseño plano sin jerarquía, tipografía Arial"
+  professionalScore: number; // 0-100, 100 = looks like a 2024 professional site
+}
+
+export async function analyzeScreenshot(base64Jpeg: string): Promise<VisualJudgment> {
+  const env = loadEnv();
+  const resp = await getClient().messages.create({
+    model: env.ANTHROPIC_MODEL,
+    max_tokens: 400,
+    tools: [
+      {
+        name: 'report_visual',
+        description: 'Reporta el juicio visual de una web tras verla.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            looksDated: { type: 'boolean', description: 'true si el diseño parece anticuado / antiguo / amateur' },
+            designEra: { type: 'string', description: 'estimación de época del diseño (ej: "early 2010s", "moderna", "alrededor de 2018")' },
+            notes: { type: 'string', description: 'observación corta en español de España sobre el diseño visual (1-2 frases máx)' },
+            professionalScore: { type: 'number', description: '0-100, donde 100 = web profesional moderna como las de 2024' },
+          },
+          required: ['looksDated', 'designEra', 'notes', 'professionalScore'],
+        },
+      },
+    ],
+    tool_choice: { type: 'tool', name: 'report_visual' },
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: { type: 'base64', media_type: 'image/jpeg', data: base64Jpeg },
+          },
+          {
+            type: 'text',
+            text: 'Esta es la web actual de un negocio (clínica, despacho, etc) en España. Júzgala visualmente como diseñador web profesional. ¿Parece anticuada? ¿De qué época? Da una nota concreta corta en español de España sobre lo que ves (tipografía, colores, layout, jerarquía, calidad de imágenes). Llama a la tool report_visual.',
+          },
+        ] as any,
+      },
+    ],
+  });
+
+  const toolUse = resp.content.find(b => b.type === 'tool_use');
+  if (!toolUse || toolUse.type !== 'tool_use') throw new Error('Claude visual: no tool_use returned');
+  const parsed = toolUse.input as VisualJudgment;
+  return parsed;
+}
+
 export async function classifyReplyText(body: string): Promise<ReplyKind> {
   const env = loadEnv();
   const prompt = `Clasifica el siguiente correo como UNA de estas tres categorías:

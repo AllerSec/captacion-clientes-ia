@@ -18,6 +18,14 @@ vi.mock('../../src/lib/logger.js', () => ({
   },
 }));
 vi.mock('../../src/core/health-monitor.js', () => ({ notifyError: vi.fn() }));
+vi.mock('../../src/services/web-screenshotter.js', () => ({
+  captureScreenshot: vi.fn().mockResolvedValue({ base64: null }),
+}));
+vi.mock('../../src/services/claude.js', () => ({
+  generateEmail: vi.fn(),
+  classifyReplyText: vi.fn(),
+  analyzeScreenshot: vi.fn(),
+}));
 
 describe('runScraper', () => {
   beforeEach(() => {
