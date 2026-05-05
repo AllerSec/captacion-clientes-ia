@@ -56,11 +56,23 @@ export interface VariantInfo {
   weight: number;
 }
 
-export function pickVariant(variants: VariantInfo[]): VariantInfo | null {
+// Deterministic 32-bit hash so the same seed (e.g. lead.id) maps to the same variant.
+// Splits stay balanced over time even if the process restarts mid-day.
+function hashSeed(seed: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0) / 0xffffffff;
+}
+
+export function pickVariant(variants: VariantInfo[], seed?: string): VariantInfo | null {
   if (variants.length === 0) return null;
   const total = variants.reduce((s, v) => s + Math.max(0, v.weight), 0);
   if (total === 0) return variants[0];
-  let r = Math.random() * total;
+  const rand = seed ? hashSeed(seed) : Math.random();
+  let r = rand * total;
   for (const v of variants) {
     r -= v.weight;
     if (r <= 0) return v;

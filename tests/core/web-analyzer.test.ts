@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { analyzeHtml, type FetchResult } from '../../src/core/web-analyzer.js';
+import { analyzeHtml, extractFooterYear, composeVisualEra, type FetchResult } from '../../src/core/web-analyzer.js';
 
 const goodHtml = `<!DOCTYPE html><html><head>
   <meta name="viewport" content="width=device-width">
@@ -39,5 +39,65 @@ describe('analyzeHtml', () => {
   it('huge HTML → adds heavy issue', () => {
     const r = analyzeHtml({ status: 200, url: 'https://x.com', html: goodHtml, sizeBytes: 600_000, durationMs: 800 });
     expect(r.issues).toContain('heavy');
+  });
+});
+
+describe('extractFooterYear', () => {
+  const now = new Date('2026-05-05');
+
+  it('finds simple © 2011', () => {
+    expect(extractFooterYear('<footer>© 2011 Clínica X</footer>', now)).toBe(2011);
+  });
+
+  it('finds &copy; entity', () => {
+    expect(extractFooterYear('<p>&copy; 2014 todos los derechos reservados</p>', now)).toBe(2014);
+  });
+
+  it('finds range and returns oldest year', () => {
+    expect(extractFooterYear('<footer>© 2008-2024 Empresa SL</footer>', now)).toBe(2008);
+  });
+
+  it('finds "Copyright 2012" without ©', () => {
+    expect(extractFooterYear('<div>Copyright 2012 Asesoría Pérez</div>', now)).toBe(2012);
+  });
+
+  it('returns null when no year present', () => {
+    expect(extractFooterYear('<footer>Todos los derechos reservados</footer>', now)).toBeNull();
+  });
+
+  it('ignores implausible years', () => {
+    expect(extractFooterYear('<footer>© 1850 Museum</footer>', now)).toBeNull();
+    expect(extractFooterYear('<footer>© 2099 Future</footer>', now)).toBeNull();
+  });
+
+  it('prefers footer-region year over a top-of-doc year', () => {
+    const html = 'top © 2024 modern-banner ' + 'x'.repeat(2000) + '<footer>© 2011</footer>';
+    expect(extractFooterYear(html, now)).toBe(2011);
+  });
+
+  it('returns null on empty input', () => {
+    expect(extractFooterYear('', now)).toBeNull();
+  });
+});
+
+describe('composeVisualEra', () => {
+  it('era + year (era looks old) → era (footer: ©year)', () => {
+    expect(composeVisualEra('early 2010s', 2011)).toBe('early 2010s (footer: ©2011)');
+  });
+
+  it('era + year (era looks modern) → "but footer:"', () => {
+    expect(composeVisualEra('modern', 2011)).toBe('modern but footer: ©2011');
+  });
+
+  it('era only → era unchanged', () => {
+    expect(composeVisualEra('early 2010s', null)).toBe('early 2010s');
+  });
+
+  it('year only → footer: ©year', () => {
+    expect(composeVisualEra(null, 2011)).toBe('footer: ©2011');
+  });
+
+  it('both null → null', () => {
+    expect(composeVisualEra(null, null)).toBeNull();
   });
 });

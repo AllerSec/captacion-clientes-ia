@@ -54,8 +54,7 @@ export async function runSender(opts: RunSenderOpts = {}): Promise<void> {
     }
 
     const variants = await getActiveVariants();
-    const variant = pickVariant(variants);
-    if (!variant) {
+    if (variants.length === 0) {
       log.warn('no active variants — aborting');
       return;
     }
@@ -64,6 +63,12 @@ export async function runSender(opts: RunSenderOpts = {}): Promise<void> {
     const lead = candidates[0];
     if (!lead) {
       log.info('no READY_TO_SEND leads');
+      return;
+    }
+
+    const variant = pickVariant(variants, lead.id);
+    if (!variant) {
+      log.warn('no variant picked — aborting');
       return;
     }
     if (!lead.email) {

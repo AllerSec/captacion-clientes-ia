@@ -48,3 +48,56 @@ export function analyzeHtml(r: FetchResult): AnalysisResult {
 
   return { score: Math.min(score, 100), issues };
 }
+
+// Returns the oldest plausible copyright year found in the HTML footer area, or null.
+// "Oldest" because "© 2008-2024" is a "we have been here since 2008" signal.
+export function extractFooterYear(html: string, now: Date = new Date()): number | null {
+  if (!html) return null;
+  const currentYear = now.getFullYear();
+  const min = 1995;
+  const max = currentYear + 1;
+
+  const footerStart = Math.floor(html.length * 0.8);
+  const footerSlice = html.slice(footerStart);
+
+  const patterns = [
+    /(?:©|&copy;)\s*(?:&nbsp;)?\s*(\d{4})\s*(?:[-–—]\s*(\d{4}))?/gi,
+    /copyright\s+(?:(?:©|&copy;)\s*)?(\d{4})/gi,
+  ];
+
+  const years = new Set<number>();
+  for (const source of [footerSlice, html]) {
+    for (const rx of patterns) {
+      const local = new RegExp(rx.source, rx.flags);
+      let m: RegExpExecArray | null;
+      while ((m = local.exec(source)) !== null) {
+        const a = parseInt(m[1], 10);
+        if (a >= min && a <= max) years.add(a);
+        if (m[2]) {
+          const b = parseInt(m[2], 10);
+          if (b >= min && b <= max) years.add(b);
+        }
+      }
+    }
+    if (years.size > 0) break;
+  }
+
+  if (years.size === 0) return null;
+  return Math.min(...years);
+}
+
+// Combines the Claude visual judgment with a hard footer-year signal.
+//   "early 2010s", 2011 -> "early 2010s (footer: ©2011)"
+//   "modern",      2011 -> "modern but footer: ©2011"
+//   "early 2010s", null -> "early 2010s"
+//   null,          2011 -> "footer: ©2011"
+export function composeVisualEra(visualEra: string | null, footerYear: number | null): string | null {
+  if (!visualEra && footerYear == null) return null;
+  if (footerYear == null) return visualEra;
+  if (!visualEra) return `footer: ©${footerYear}`;
+
+  const looksOld = /200\d|201[0-5]|early\s*2010|antes de|pre[\s-]?responsive|antiguo|obsoleto/i.test(visualEra);
+  return looksOld
+    ? `${visualEra} (footer: ©${footerYear})`
+    : `${visualEra} but footer: ©${footerYear}`;
+}

@@ -4,7 +4,7 @@ import {
   getRecentlyUsedQueries, recordQueryUsed, getScraperState, setScraperTier, markBurstDone, countReadyToSend,
 } from '../services/supabase.js';
 import { fetchWebsite } from '../services/web-fetcher.js';
-import { analyzeHtml } from '../core/web-analyzer.js';
+import { analyzeHtml, extractFooterYear, composeVisualEra } from '../core/web-analyzer.js';
 import { qualifyLead } from '../core/lead-filter.js';
 import { logger } from '../lib/logger.js';
 import { notifyError } from '../core/health-monitor.js';
@@ -114,12 +114,14 @@ async function analyzeOneLead(lead: any): Promise<void> {
   let web_score = 100;
   let web_issues: string[] = [];
   let visual: { looksDated?: boolean; era?: string; notes?: string } = {};
+  let footerYear: number | null = null;
   try {
     if (lead.website) {
       const fetched = await fetchWebsite(lead.website);
       const r = analyzeHtml(fetched);
       web_score = r.score;
       web_issues = r.issues;
+      footerYear = extractFooterYear(fetched.html);
       if (fetched.status >= 200 && fetched.status < 400) {
         try {
           const shot = await Promise.race([
@@ -147,7 +149,7 @@ async function analyzeOneLead(lead: any): Promise<void> {
       status: 'ANALYZED', web_score, web_issues,
       web_analyzed_at: new Date().toISOString(),
       web_visual_dated: visual.looksDated ?? null,
-      web_visual_era: visual.era ?? null,
+      web_visual_era: composeVisualEra(visual.era ?? null, footerYear),
       web_visual_notes: visual.notes ?? null,
     });
   } catch (err) {

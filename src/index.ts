@@ -7,9 +7,17 @@ import { runSender } from './jobs/sender.js';
 import { runWatcher } from './jobs/watcher.js';
 import { notifyError } from './core/health-monitor.js';
 import { runDailySummary } from './jobs/daily-summary.js';
+import { ensureVariantsSeeded } from './config/variants.js';
 
 const env = loadEnv();
 const log = logger.child({ component: 'main' });
+
+// Idempotent: upserts variant definitions on every deploy. Safe to fail (sender will warn).
+ensureVariantsSeeded().catch(err => {
+  log.error({ err: err instanceof Error ? err.message : String(err) }, 'variant seed failed at boot');
+  notifyError('warn', 'Variant seed failed at boot', err instanceof Error ? (err.stack ?? err.message) : String(err))
+    .catch(() => { /* health-monitor itself broken, swallow */ });
+});
 
 let lastSenderRun = Date.now();
 let lastWatcherRun = Date.now();
