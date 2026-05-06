@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { buildUserPrompt, htmlToText, pickVariant } from '../../src/core/email-composer.js';
 
 describe('buildUserPrompt', () => {
-  it('contains business name, rating, and issues', () => {
+  it('contains business name, rating, scenario and footer year for old_website', () => {
     const p = buildUserPrompt({
       business_name: 'Clínica Dental García',
       category: 'clínica dental',
@@ -11,19 +11,38 @@ describe('buildUserPrompt', () => {
       review_count: 130,
       website: 'https://x.com',
       web_issues: ['not_responsive', 'slow'],
+      footer_year: 2014,
+      notable_antiquated_details: ['tipografía pequeña', 'fotos pixeladas'],
+      visual_era: 'early-2010s',
     });
     expect(p).toContain('Clínica Dental García');
     expect(p).toContain('4.8');
     expect(p).toContain('130');
-    expect(p).toContain('not_responsive');
+    expect(p).toContain('ESCENARIO: web antigua');
+    expect(p).toContain('FOOTER_YEAR: 2014');
+    expect(p).toContain('VISUAL_ERA: early-2010s');
+    expect(p).toContain('tipografía pequeña');
   });
 
-  it('flags no_website case', () => {
+  it('marks scenario as "sin web" when no website', () => {
     const p = buildUserPrompt({
       business_name: 'X', category: null, city: null,
       rating: 4.5, review_count: 30, website: null, web_issues: ['no_website'],
     });
+    expect(p).toContain('ESCENARIO: sin web');
     expect(p.toLowerCase()).toContain('no tienen web');
+  });
+
+  it('shows "(ninguno notable)" when details list is empty', () => {
+    const p = buildUserPrompt({
+      business_name: 'X', category: null, city: null,
+      rating: 4.5, review_count: 30,
+      website: 'https://x.com', web_issues: [],
+      footer_year: 2011, notable_antiquated_details: [],
+      visual_era: 'pre-2010',
+    });
+    expect(p).toContain('DETALLES_VISUALES: (ninguno notable)');
+    expect(p).toContain('FOOTER_YEAR: 2011');
   });
 });
 

@@ -7,6 +7,7 @@ const schema = z.object({
   APIFY_TOKEN: z.string().min(1),
   ANTHROPIC_API_KEY: z.string().min(1),
   ANTHROPIC_MODEL: z.string().default('claude-sonnet-4-6'),
+  FIRECRAWL_API_KEY: z.string().startsWith('fc-'),
   GMAIL_CLIENT_ID: z.string().min(1),
   GMAIL_CLIENT_SECRET: z.string().min(1),
   GMAIL_REFRESH_TOKEN: z.string().min(1),

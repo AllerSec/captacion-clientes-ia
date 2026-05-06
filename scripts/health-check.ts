@@ -21,7 +21,13 @@ async function main() {
   const txt = r.content.find(b => b.type === 'text');
   console.log('   OK', txt && txt.type === 'text' ? txt.text.slice(0, 20) : '');
 
-  console.log('4) Gmail ping...');
+  console.log('4) Firecrawl ping...');
+  const { scrapeForLeadAnalysis } = await import('../src/services/firecrawl.js');
+  const fc = await scrapeForLeadAnalysis('https://example.com');
+  if (!fc.ok) { console.error('   FAIL', fc.error); process.exit(1); }
+  console.log(`   OK (${fc.statusCode}, ${fc.durationMs}ms)`);
+
+  console.log('5) Gmail ping...');
   const { google } = await import('googleapis');
   const oauth = new google.auth.OAuth2(env.GMAIL_CLIENT_ID, env.GMAIL_CLIENT_SECRET);
   oauth.setCredentials({ refresh_token: env.GMAIL_REFRESH_TOKEN });
