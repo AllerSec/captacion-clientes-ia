@@ -9,28 +9,41 @@ export interface ComposerInput {
   web_visual_dated?: boolean | null;
   web_visual_era?: string | null;
   web_visual_notes?: string | null;
+  footer_year?: number | null;
+  notable_antiquated_details?: string[];
+  visual_era?: 'pre-2010' | 'early-2010s' | 'late-2010s' | 'modern' | null;
 }
 
 export function buildUserPrompt(input: ComposerInput): string {
   const lines: string[] = [
-    `Negocio: ${input.business_name}`,
-    `Categoría: ${input.category ?? 'desconocida'}`,
-    `Ciudad: ${input.city ?? 'no indicada'}`,
+    `NOMBRE_NEGOCIO: ${input.business_name}`,
+    `CATEGORIA: ${input.category ?? 'desconocida'}`,
+    `CIUDAD: ${input.city ?? 'no indicada'}`,
     `Rating: ${input.rating ?? 'n/a'} (${input.review_count ?? 0} reseñas)`,
   ];
-  if (input.website) {
-    lines.push(`Web: ${input.website}`);
-    lines.push(`Problemas técnicos detectados: ${JSON.stringify(input.web_issues)}`);
-    if (input.web_visual_notes) {
-      lines.push(`Análisis visual del diseño: ${input.web_visual_notes}`);
-      if (input.web_visual_era) lines.push(`Época estimada del diseño: ${input.web_visual_era}`);
-      if (input.web_visual_dated) lines.push(`Veredicto visual: la web parece ANTICUADA.`);
-    }
+
+  if (!input.website) {
+    lines.push('');
+    lines.push('ESCENARIO: sin web');
+    lines.push('No tienen web propia (no aparece en su ficha de Google).');
   } else {
-    lines.push(`No tienen web propia (no aparece en su ficha de Google).`);
+    lines.push('');
+    lines.push('ESCENARIO: web antigua');
+    lines.push(`Web: ${input.website}`);
+    lines.push(`FOOTER_YEAR: ${input.footer_year ?? 'desconocido'}`);
+    lines.push(`VISUAL_ERA: ${input.visual_era ?? 'desconocida'}`);
+    const details = input.notable_antiquated_details ?? [];
+    lines.push(
+      `DETALLES_VISUALES: ${details.length > 0 ? details.join(', ') : '(ninguno notable)'}`
+    );
+    // Contexto legacy / fallback (visión por puppeteer cuando Firecrawl falla):
+    if (input.web_visual_notes) {
+      lines.push(`Análisis visual (fallback): ${input.web_visual_notes}`);
+    }
   }
+
   lines.push('');
-  lines.push('Genera el email siguiendo todas las reglas del system prompt. Devuelve SOLO el JSON.');
+  lines.push('Genera el email siguiendo todas las reglas del system prompt. Llama a send_email_draft.');
   return lines.join('\n');
 }
 

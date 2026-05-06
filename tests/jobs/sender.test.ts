@@ -72,7 +72,10 @@ describe('runSender', () => {
       review_count: 50, website: null, web_issues: ['no_website'],
       category: null, city: 'Bilbao',
     }]);
-    mockGenerate.mockResolvedValue({ subject: 'una idea', body: '<p>hola</p>' });
+    mockGenerate.mockResolvedValue({
+      subject: 'una idea',
+      body: `<p>Hola,</p><p>Vi que no tenéis web propia.</p><p><b>Os preparo una propuesta visual de cómo podría quedar la web, gratis y sin compromiso</b>. Si os gusta, hablamos. Si no, ahí queda.</p><p>¿Os interesa que os la pase? Se ve en un minuto.</p><p>Unax<br>unaxaller.com<br>Irún</p>`,
+    });
     mockSendEmail.mockResolvedValue({ messageId: 'm1', threadId: 't1' });
 
     const { runSender } = await import('../../src/jobs/sender.js');

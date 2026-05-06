@@ -6,7 +6,7 @@ const base: LeadInput = {
   review_count: 50, website: null, web_score: null,
 };
 
-describe('qualifyLead', () => {
+describe('qualifyLead — gates de reputación / contacto', () => {
   it('qualifies a no-website lead with good reputation', () => {
     expect(qualifyLead(base).qualified).toBe(true);
   });
@@ -31,33 +31,39 @@ describe('qualifyLead', () => {
     expect(qualifyLead({ ...base, business_name: 'Vital Dent Bilbao' }).qualified).toBe(false);
     expect(qualifyLead({ ...base, business_name: 'Quirónsalud' }).qualified).toBe(false);
   });
+});
 
-  it('qualifies website with high web_score (serious technical issues)', () => {
-    expect(qualifyLead({ ...base, website: 'https://x.com', web_score: 70 }).qualified).toBe(true);
+describe('qualifyLead — footer year gate (web antigua)', () => {
+  it('qualifies website with footer year <= 2018', () => {
+    const r = qualifyLead({ ...base, website: 'https://x.com', footer_year: 2014 });
+    expect(r.qualified).toBe(true);
   });
 
-  it('rejects website with low web_score and no visual antiquity', () => {
-    expect(qualifyLead({ ...base, website: 'https://x.com', web_score: 20 }).qualified).toBe(false);
+  it('qualifies edge case footer year = 2018', () => {
+    const r = qualifyLead({ ...base, website: 'https://x.com', footer_year: 2018 });
+    expect(r.qualified).toBe(true);
   });
 
-  it('rejects website that looks moderately dated but era is recent (2018-2020)', () => {
-    expect(qualifyLead({
-      ...base, website: 'https://x.com', web_score: 20,
-      web_visual_dated: true, web_visual_era: '2018-2020',
-    }).qualified).toBe(false);
+  it('disqualifies website with footer year > 2018', () => {
+    const r = qualifyLead({ ...base, website: 'https://x.com', footer_year: 2022 });
+    expect(r.qualified).toBe(false);
+    expect(r.reason).toBe('web_too_recent');
   });
 
-  it('qualifies website that is visually ancient (pre-2016)', () => {
-    expect(qualifyLead({
-      ...base, website: 'https://x.com', web_score: 20,
-      web_visual_dated: true, web_visual_era: 'early 2010s',
-    }).qualified).toBe(true);
+  it('disqualifies website with no footer year proof', () => {
+    const r = qualifyLead({ ...base, website: 'https://x.com', footer_year: null });
+    expect(r.qualified).toBe(false);
+    expect(r.reason).toBe('no_year_proof');
   });
 
-  it('qualifies visually ancient with descriptive era like "antes de la era móvil"', () => {
-    expect(qualifyLead({
-      ...base, website: 'https://x.com', web_score: 30,
-      web_visual_dated: true, web_visual_era: 'antes de la era móvil',
-    }).qualified).toBe(true);
+  it('no_year_proof is independent of web_score (we do not infer antiquity from tech issues)', () => {
+    const r = qualifyLead({ ...base, website: 'https://x.com', web_score: 90, footer_year: null });
+    expect(r.qualified).toBe(false);
+    expect(r.reason).toBe('no_year_proof');
+  });
+
+  it('no website beats footer year (no website always qualifies)', () => {
+    const r = qualifyLead({ ...base, website: null, footer_year: 2024 });
+    expect(r.qualified).toBe(true);
   });
 });

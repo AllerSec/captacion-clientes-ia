@@ -6,6 +6,7 @@ import {
 import { fetchWebsite } from '../services/web-fetcher.js';
 import { analyzeHtml, extractFooterYear, composeVisualEra } from '../core/web-analyzer.js';
 import { qualifyLead } from '../core/lead-filter.js';
+import { scrapeForLeadAnalysis, type WebSignals } from '../services/firecrawl.js';
 import { logger } from '../lib/logger.js';
 import { notifyError } from '../core/health-monitor.js';
 import { captureScreenshot } from '../services/web-screenshotter.js';
@@ -100,9 +101,11 @@ async function analyzeOneLead(lead: any): Promise<void> {
     web_visual_dated: null,
     web_visual_era: null,
   });
-  if (!earlyCheck.qualified && earlyCheck.reason !== 'web_acceptable') {
-    // Reason is one of: no_email, invalid_email, low_rating, few_reviews, blacklisted.
-    // None of these can be fixed by analysis — skip directly.
+  // Early-check solo descarta motivos que NO se pueden resolver analizando la web
+  // (email/rating/reviews/blacklist). Los motivos relacionados con la web aún no
+  // los hemos podido evaluar, así que NO descartamos por ellos aquí.
+  const earlyAnalysisDeferredReasons = new Set(['web_acceptable', 'no_year_proof', 'web_too_recent']);
+  if (!earlyCheck.qualified && !earlyAnalysisDeferredReasons.has(earlyCheck.reason ?? '')) {
     try {
       await updateLead(lead.id, { status: 'SKIPPED', notes: earlyCheck.reason ?? 'pre_filtered' });
     } catch (err) {
@@ -115,33 +118,60 @@ async function analyzeOneLead(lead: any): Promise<void> {
   let web_issues: string[] = [];
   let visual: { looksDated?: boolean; era?: string; notes?: string } = {};
   let footerYear: number | null = null;
+  let signals: WebSignals | null = null;
+  let screenshotUrl: string | null = null;
+  let firecrawl_status: 'ok' | 'failed' | 'fallback' | 'skipped_no_url' = 'skipped_no_url';
+
   try {
     if (lead.website) {
-      const fetched = await fetchWebsite(lead.website);
-      const r = analyzeHtml(fetched);
-      web_score = r.score;
-      web_issues = r.issues;
-      footerYear = extractFooterYear(fetched.html);
-      if (fetched.status >= 200 && fetched.status < 400) {
-        try {
-          const shot = await Promise.race([
-            captureScreenshot(lead.website!),
-            new Promise<{ base64: null; error: string }>((_, rej) =>
-              setTimeout(() => rej(new Error('screenshot+visual timeout')), 25000)
-            ),
-          ]);
-          if (shot.base64) {
-            const j = await analyzeScreenshot(shot.base64);
-            visual = { looksDated: j.looksDated, era: j.designEra, notes: j.notes };
+      const fc = await scrapeForLeadAnalysis(lead.website);
+
+      if (fc.ok) {
+        firecrawl_status = 'ok';
+        signals = fc.signals;
+        screenshotUrl = fc.screenshotUrl;
+        footerYear = fc.signals.footerCopyrightYear ?? null;
+        // En modo Firecrawl, web_score/web_issues son informativos: el qualify
+        // depende solo de footerYear. Mantenemos compatibilidad con campos legacy.
+        web_score = footerYear != null ? 0 : 100;
+        web_issues = fc.signals.notableAntiquatedDetails;
+        visual = {
+          looksDated: fc.signals.looksAbandoned,
+          era: fc.signals.visualEra ?? undefined,
+        };
+      } else {
+        // FALLBACK — Firecrawl caído, sin créditos, etc. Usamos el fetch nativo
+        // y vision por puppeteer como red de seguridad.
+        log.warn({ leadId: lead.id, err: fc.error }, 'firecrawl failed, using fallback');
+        firecrawl_status = 'fallback';
+        const fetched = await fetchWebsite(lead.website);
+        const r = analyzeHtml(fetched);
+        web_score = r.score;
+        web_issues = r.issues;
+        footerYear = extractFooterYear(fetched.html);
+        if (fetched.status >= 200 && fetched.status < 400) {
+          try {
+            const shot = await Promise.race([
+              captureScreenshot(lead.website!),
+              new Promise<{ base64: null; error: string }>((_, rej) =>
+                setTimeout(() => rej(new Error('screenshot+visual timeout')), 25000)
+              ),
+            ]);
+            if (shot.base64) {
+              const j = await analyzeScreenshot(shot.base64);
+              visual = { looksDated: j.looksDated, era: j.designEra, notes: j.notes };
+            }
+          } catch (err) {
+            log.warn({ err: (err as Error).message, leadId: lead.id }, 'visual analysis failed');
           }
-        } catch (err) {
-          log.warn({ err: (err as Error).message, leadId: lead.id }, 'visual analysis failed');
         }
       }
     } else {
       web_issues = ['no_website'];
+      firecrawl_status = 'skipped_no_url';
     }
   } catch (err) {
+    firecrawl_status = 'failed';
     log.warn({ err: (err as Error).message, leadId: lead.id }, 'analysis failed; continuing');
   }
   try {
@@ -151,7 +181,10 @@ async function analyzeOneLead(lead: any): Promise<void> {
       web_visual_dated: visual.looksDated ?? null,
       web_visual_era: composeVisualEra(visual.era ?? null, footerYear),
       web_visual_notes: visual.notes ?? null,
-    });
+      web_signals: signals as any,
+      screenshot_url: screenshotUrl,
+      firecrawl_status,
+    } as any);
   } catch (err) {
     log.error({ err, leadId: lead.id }, 'updateLead failed');
   }
@@ -176,6 +209,8 @@ async function analyzeAndFilter(): Promise<void> {
   // Filter ANALYZED
   const analyzed = await getLeadsByStatus('ANALYZED', 500);
   for (const lead of analyzed) {
+    const sig = (lead as any).web_signals as WebSignals | null;
+    const fy = sig?.footerCopyrightYear ?? null;
     const q = qualifyLead({
       business_name: lead.business_name,
       email: lead.email ?? null,
@@ -185,6 +220,7 @@ async function analyzeAndFilter(): Promise<void> {
       web_score: lead.web_score ?? null,
       web_visual_dated: (lead as any).web_visual_dated ?? null,
       web_visual_era: (lead as any).web_visual_era ?? null,
+      footer_year: fy,
     });
     await updateLead(lead.id, {
       status: q.qualified ? 'READY_TO_SEND' : 'SKIPPED',
