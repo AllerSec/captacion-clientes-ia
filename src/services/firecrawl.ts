@@ -8,6 +8,7 @@ const SignalsSchema = z.object({
   looksAbandoned: z.boolean(),
   visualEra: z.enum(['pre-2010', 'early-2010s', 'late-2010s', 'modern']).nullable(),
   notableAntiquatedDetails: z.array(z.string()).max(4),
+  hasOnlineShop: z.boolean().default(false),
 });
 
 export type WebSignals = z.infer<typeof SignalsSchema>;
@@ -18,6 +19,7 @@ const EMPTY_SIGNALS: WebSignals = {
   looksAbandoned: false,
   visualEra: null,
   notableAntiquatedDetails: [],
+  hasOnlineShop: false,
 };
 
 export type FirecrawlResult =
@@ -49,7 +51,8 @@ const JSON_PROMPT = `Extract from this Spanish business website:
 - latestBlogOrNewsDate: ISO date string of the most recent blog/news post if any, or null
 - looksAbandoned: true if the site clearly looks untouched for years (broken links, outdated info, dead end)
 - visualEra: one of "pre-2010", "early-2010s", "late-2010s", "modern"
-- notableAntiquatedDetails: array of 0-4 short Spanish strings describing visible signs of age. Examples: "tipografía pequeña", "fotos pixeladas", "menú con tablas", "diseño anterior al móvil", "imágenes que cargan lentas". Empty array if nothing notable.`;
+- notableAntiquatedDetails: array of 0-4 short Spanish strings describing visible signs of age. Examples: "tipografía pequeña", "fotos pixeladas", "menú con tablas", "diseño anterior al móvil", "imágenes que cargan lentas". Empty array if nothing notable.
+- hasOnlineShop: true if the site has a real e-commerce / online shop (cart, checkout, "Añadir al carrito", "Comprar", product listings with prices and add-to-cart, WooCommerce/Shopify/PrestaShop/Magento markers, /tienda, /shop, /carrito, /checkout). False for simple service sites, brochure sites, or sites that just list products without a buy flow.`;
 
 export async function scrapeForLeadAnalysis(url: string): Promise<FirecrawlResult> {
   const start = Date.now();

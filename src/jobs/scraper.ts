@@ -221,6 +221,7 @@ async function analyzeAndFilter(): Promise<void> {
       web_visual_dated: (lead as any).web_visual_dated ?? null,
       web_visual_era: (lead as any).web_visual_era ?? null,
       footer_year: fy,
+      has_online_shop: sig?.hasOnlineShop ?? null,
     });
     await updateLead(lead.id, {
       status: q.qualified ? 'READY_TO_SEND' : 'SKIPPED',

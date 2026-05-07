@@ -8,6 +8,7 @@ export interface LeadInput {
   web_visual_dated?: boolean | null;
   web_visual_era?: string | null;
   footer_year?: number | null;
+  has_online_shop?: boolean | null;
 }
 
 export interface QualifyResult {
@@ -45,6 +46,12 @@ export function qualifyLead(l: LeadInput): QualifyResult {
 
   // No website: golden case. Cualifica directo.
   if (!l.website) return { qualified: true };
+
+  // Tienda online: fuera del alcance de un freelance (woocommerce/shopify/etc
+  // requiere mantenimiento, pasarelas de pago, stock...). No contactamos.
+  if (l.has_online_shop === true) {
+    return { qualified: false, reason: 'has_online_shop' };
+  }
 
   // Tiene web. Solo cualifica si hay PRUEBA HONESTA de antigüedad:
   // footer copyright year <= 2018. Sin año, no enviamos (evita afirmaciones falsas).
