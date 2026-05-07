@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { validateGeneratedEmail } from '../../src/core/email-validator.js';
 
 const sig = `<p>Unax<br>unaxaller.com<br>Irún</p>`;
-const offer = `<p><b>Os preparo una propuesta visual de cómo podría quedar la web, gratis y sin compromiso</b>. Si os gusta, hablamos. Si no, ahí queda.</p>`;
+const offer = `<p>Os preparo una web de prueba <b>gratis y sin compromiso</b> para que veáis las diferencias.</p>`;
 const cta = `<p>¿Os interesa que os la pase? Se ve en un minuto.</p>`;
 const intro = (extra = '') => `<p>Hola,</p><p>He abierto vuestra web. El footer pone ©2014.${extra}</p>`;
 const wholeBody = (extra = '') => `${intro(extra)}${offer}${cta}${sig}`;

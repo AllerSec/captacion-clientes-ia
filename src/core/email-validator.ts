@@ -46,6 +46,10 @@ export function validateGeneratedEmail(input: ValidateInput): ValidateResult {
   const boldCount = (body.match(/<b>/gi) ?? []).length;
   if (boldCount !== 1) errors.push(`body: ${boldCount} <b> (debe ser exactamente 1)`);
 
+  if (boldCount === 1 && !/<b>\s*gratis y sin compromiso\s*<\/b>/i.test(body)) {
+    errors.push('body: la negrita debe envolver exactamente "gratis y sin compromiso"');
+  }
+
   if (!SIGNATURE_RX.test(body)) errors.push('body: firma no encontrada');
 
   return errors.length === 0 ? { ok: true } : { ok: false, errors };

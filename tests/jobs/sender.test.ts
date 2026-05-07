@@ -74,7 +74,7 @@ describe('runSender', () => {
     }]);
     mockGenerate.mockResolvedValue({
       subject: 'una idea',
-      body: `<p>Hola,</p><p>Vi que no tenéis web propia.</p><p><b>Os preparo una propuesta visual de cómo podría quedar la web, gratis y sin compromiso</b>. Si os gusta, hablamos. Si no, ahí queda.</p><p>¿Os interesa que os la pase? Se ve en un minuto.</p><p>Unax<br>unaxaller.com<br>Irún</p>`,
+      body: `<p>Hola,</p><p>Vi que no tenéis web propia.</p><p>Os preparo una web de prueba <b>gratis y sin compromiso</b> para que veáis las diferencias.</p><p>¿Os interesa que os la pase? Se ve en un minuto.</p><p>Unax<br>unaxaller.com<br>Irún</p>`,
     });
     mockSendEmail.mockResolvedValue({ messageId: 'm1', threadId: 't1' });
 
