@@ -4,8 +4,10 @@ const mockSearch = vi.fn();
 const mockUpsert = vi.fn();
 const mockUpdate = vi.fn();
 const mockGetByStatus = vi.fn();
+const mockEnrich = vi.fn();
 
 vi.mock('../../src/services/apify.js', () => ({ searchBusinesses: mockSearch }));
+vi.mock('../../src/services/lead-enricher.js', () => ({ enrichLead: mockEnrich }));
 vi.mock('../../src/services/supabase.js', () => ({
   upsertLead: mockUpsert, updateLead: mockUpdate, getLeadsByStatus: mockGetByStatus,
   getRecentlyUsedQueries: vi.fn().mockResolvedValue(new Set()),
@@ -27,6 +29,7 @@ describe('runScraper', () => {
   beforeEach(() => {
     mockSearch.mockReset(); mockUpsert.mockReset();
     mockUpdate.mockReset(); mockGetByStatus.mockReset();
+    mockEnrich.mockReset();
   });
 
   it('end-to-end: scrape, analyze (no website), promote to READY_TO_SEND', async () => {
@@ -93,6 +96,104 @@ describe('runScraper', () => {
 
     expect(mockUpdate).toHaveBeenCalledWith('lead-3', expect.objectContaining({
       status: 'SKIPPED',
+    }));
+  });
+
+  it('without email and low rating: skipped without calling enricher', async () => {
+    mockSearch.mockResolvedValue([]);
+    mockGetByStatus
+      .mockResolvedValueOnce([{
+        id: 'lead-pre', business_name: 'Taller P', website: null,
+        email: null, rating: 3.5, review_count: 50, city: 'Bilbao',
+      }])
+      .mockResolvedValueOnce([]);
+
+    const { runScraper } = await import('../../src/jobs/scraper.js');
+    await runScraper([]);
+
+    expect(mockEnrich).not.toHaveBeenCalled();
+    expect(mockUpdate).toHaveBeenCalledWith('lead-pre', expect.objectContaining({
+      status: 'SKIPPED', notes: 'low_rating',
+    }));
+  });
+
+  it('without email but good reputation: enricher finds email, lead promoted', async () => {
+    mockSearch.mockResolvedValue([]);
+    mockEnrich.mockResolvedValue({
+      kind: 'email_found',
+      email: 'info@taller.es',
+      reasoning: 'snippet con email',
+      durationMs: 1500,
+    });
+    mockGetByStatus
+      .mockResolvedValueOnce([{
+        id: 'lead-e1', business_name: 'Taller E', website: null,
+        email: null, rating: 4.7, review_count: 60, city: 'Bilbao',
+      }])
+      .mockResolvedValueOnce([{
+        id: 'lead-e1', business_name: 'Taller E', website: null,
+        email: 'info@taller.es', rating: 4.7, review_count: 60,
+      }]);
+
+    const { runScraper } = await import('../../src/jobs/scraper.js');
+    await runScraper([]);
+
+    expect(mockEnrich).toHaveBeenCalledTimes(1);
+    expect(mockUpdate).toHaveBeenCalledWith('lead-e1', expect.objectContaining({
+      email: 'info@taller.es', enriched_via: 'search',
+    }));
+    expect(mockUpdate).toHaveBeenCalledWith('lead-e1', expect.objectContaining({
+      status: 'ANALYZED',
+    }));
+    expect(mockUpdate).toHaveBeenCalledWith('lead-e1', expect.objectContaining({
+      status: 'READY_TO_SEND',
+    }));
+  });
+
+  it('without email but good reputation: enricher finds own website, SKIPPED has_website_found_online', async () => {
+    mockSearch.mockResolvedValue([]);
+    mockEnrich.mockResolvedValue({
+      kind: 'has_real_website',
+      website_url: 'https://taller.es',
+      reasoning: 'dominio propio con horarios',
+      durationMs: 2100,
+    });
+    mockGetByStatus
+      .mockResolvedValueOnce([{
+        id: 'lead-e2', business_name: 'Taller W', website: null,
+        email: null, rating: 4.6, review_count: 40, city: 'Bilbao',
+      }])
+      .mockResolvedValueOnce([]);
+
+    const { runScraper } = await import('../../src/jobs/scraper.js');
+    await runScraper([]);
+
+    expect(mockEnrich).toHaveBeenCalledTimes(1);
+    expect(mockUpdate).toHaveBeenCalledWith('lead-e2', expect.objectContaining({
+      status: 'SKIPPED', notes: 'has_website_found_online',
+      enriched_website: 'https://taller.es',
+    }));
+  });
+
+  it('without email, enricher returns nothing_found: SKIPPED no_email_after_enrich', async () => {
+    mockSearch.mockResolvedValue([]);
+    mockEnrich.mockResolvedValue({
+      kind: 'nothing_found',
+      reasoning: 'sin info útil',
+      durationMs: 800,
+    });
+    mockGetByStatus
+      .mockResolvedValueOnce([{
+        id: 'lead-e3', business_name: 'Taller N', website: null,
+        email: null, rating: 4.5, review_count: 20, city: 'Bilbao',
+      }])
+      .mockResolvedValueOnce([]);
+
+    const { runScraper } = await import('../../src/jobs/scraper.js');
+    await runScraper([]);
+
+    expect(mockUpdate).toHaveBeenCalledWith('lead-e3', expect.objectContaining({
+      status: 'SKIPPED', notes: 'no_email_after_enrich',
     }));
   });
 });
