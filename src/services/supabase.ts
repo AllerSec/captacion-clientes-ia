@@ -24,6 +24,9 @@ export interface LeadRow {
   notes?: string | null;
   contacted_at?: string | null;
   responded_at?: string | null;
+  enriched_at?: string | null;
+  enriched_via?: string | null;
+  enriched_website?: string | null;
   created_at?: string;
 }
 
