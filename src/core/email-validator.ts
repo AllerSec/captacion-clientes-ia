@@ -19,7 +19,8 @@ const FORBIDDEN_TECH = [
   /no\s*est[áa]\s*optimi/i,
 ];
 
-const SIGNATURE_RX = /Unax\s*<br>\s*unaxaller\.com\s*<br>\s*Irún/i;
+const SIGNATURE_RX = /unaxaller\.com/i;
+const EXPECTED_SUBJECT = /^pregunta muy r[aá]pida$/i;
 
 export function validateGeneratedEmail(input: ValidateInput): ValidateResult {
   const errors: string[] = [];
@@ -28,8 +29,7 @@ export function validateGeneratedEmail(input: ValidateInput): ValidateResult {
   const detailsMentionMobile = input.details.some(d => /móvil/i.test(d));
 
   if (subj.length === 0) errors.push('subject: vacío');
-  if (/[A-ZÁÉÍÓÚÑ]/.test(subj)) errors.push('subject: contiene mayúsculas');
-  if (subj.split(/\s+/).length > 4) errors.push('subject: más de 4 palabras');
+  if (!EXPECTED_SUBJECT.test(subj)) errors.push('subject: debe ser exactamente "Pregunta muy rápida"');
   if (/móvil/i.test(subj)) errors.push('subject: contiene "móvil" (prohibido)');
   if (/[!¡]/.test(subj)) errors.push('subject: contiene exclamación');
 

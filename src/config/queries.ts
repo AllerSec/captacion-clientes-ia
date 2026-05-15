@@ -1,126 +1,98 @@
 /**
  * Queries por tier. Tier 1 = más cerca de Irún, Tier 8 = más lejos.
- * El sistema usa estas en orden: cuando se agotan las del tier actual, salta al siguiente.
- * Sectores priorizados: clínicas dentales/estéticas/veterinarias/fisio, despachos,
- * inmobiliarias, asesorías, ortodoncistas, podólogos, centros médicos privados.
+ * Sectores: óptica, taller mecánico, farmacia.
+ * Solo contactamos negocios SIN web: el sistema descarta los que tienen.
  */
 export const QUERIES_BY_TIER: Record<number, string[]> = {
-  // ===== TIER 1: Irún + Hondarribia + Hendaya (vecinos) =====
+  // ===== TIER 1: Irún + Hondarribia =====
   1: [
-    'clínica dental Irún', 'clínica estética Irún', 'fisioterapia Irún',
-    'podólogo Irún', 'veterinaria Irún', 'ortodoncia Irún',
-    'centro médico privado Irún', 'asesoría Irún', 'inmobiliaria Irún',
-    'reformas Irún', 'despacho abogados Irún',
-    'clínica dental Hondarribia', 'clínica estética Hondarribia',
-    'fisioterapia Hondarribia', 'veterinaria Hondarribia',
-    'inmobiliaria Hondarribia', 'asesoría Hondarribia',
+    'óptica Irún', 'taller mecánico Irún', 'farmacia Irún',
+    'óptica Hondarribia', 'taller mecánico Hondarribia', 'farmacia Hondarribia',
   ],
 
   // ===== TIER 2: Resto Gipuzkoa =====
   2: [
-    'clínica dental Donostia', 'clínica estética Donostia',
-    'fisioterapia Donostia', 'podólogo Donostia', 'veterinaria Donostia',
-    'ortodoncia Donostia', 'asesoría Donostia', 'inmobiliaria Donostia',
-    'despacho abogados Donostia',
-    'clínica dental Tolosa', 'fisioterapia Tolosa', 'veterinaria Tolosa',
-    'clínica dental Eibar', 'fisioterapia Eibar',
-    'clínica dental Zarautz', 'clínica estética Zarautz',
-    'clínica dental Hernani', 'clínica dental Bergara',
-    'clínica dental Beasain', 'clínica dental Azpeitia',
-    'clínica dental Zumaia', 'clínica dental Lasarte',
-    'clínica dental Andoain', 'clínica dental Errenteria',
+    'óptica Donostia', 'taller mecánico Donostia', 'farmacia Donostia',
+    'óptica Tolosa', 'taller mecánico Tolosa', 'farmacia Tolosa',
+    'óptica Eibar', 'taller mecánico Eibar', 'farmacia Eibar',
+    'óptica Zarautz', 'taller mecánico Zarautz', 'farmacia Zarautz',
+    'óptica Hernani', 'taller mecánico Hernani', 'farmacia Hernani',
+    'óptica Errenteria', 'taller mecánico Errenteria', 'farmacia Errenteria',
+    'óptica Andoain', 'taller mecánico Andoain', 'farmacia Andoain',
+    'óptica Lasarte', 'taller mecánico Lasarte', 'farmacia Lasarte',
   ],
 
   // ===== TIER 3: Bizkaia =====
   3: [
-    'clínica dental Bilbao', 'clínica estética Bilbao',
-    'fisioterapia Bilbao', 'podólogo Bilbao', 'veterinaria Bilbao',
-    'ortodoncia Bilbao', 'asesoría Bilbao', 'inmobiliaria Bilbao',
-    'despacho abogados Bilbao',
-    'clínica dental Getxo', 'clínica estética Getxo',
-    'fisioterapia Getxo', 'veterinaria Getxo',
-    'clínica dental Durango', 'fisioterapia Durango',
-    'clínica dental Barakaldo', 'clínica dental Portugalete',
-    'clínica dental Basauri', 'clínica dental Sestao',
-    'clínica dental Erandio', 'clínica dental Leioa',
-    'clínica dental Mungia', 'clínica dental Bermeo',
-    'clínica dental Galdakao', 'clínica dental Amorebieta',
+    'óptica Bilbao', 'taller mecánico Bilbao', 'farmacia Bilbao',
+    'óptica Getxo', 'taller mecánico Getxo', 'farmacia Getxo',
+    'óptica Barakaldo', 'taller mecánico Barakaldo', 'farmacia Barakaldo',
+    'óptica Durango', 'taller mecánico Durango', 'farmacia Durango',
+    'óptica Basauri', 'taller mecánico Basauri', 'farmacia Basauri',
+    'óptica Leioa', 'taller mecánico Leioa', 'farmacia Leioa',
+    'óptica Portugalete', 'taller mecánico Portugalete', 'farmacia Portugalete',
+    'óptica Sestao', 'taller mecánico Sestao', 'farmacia Sestao',
   ],
 
   // ===== TIER 4: Navarra =====
   4: [
-    'clínica dental Pamplona', 'clínica estética Pamplona',
-    'fisioterapia Pamplona', 'podólogo Pamplona', 'veterinaria Pamplona',
-    'ortodoncia Pamplona', 'asesoría Pamplona', 'inmobiliaria Pamplona',
-    'despacho abogados Pamplona',
-    'clínica dental Tudela', 'fisioterapia Tudela', 'veterinaria Tudela',
-    'clínica dental Estella', 'clínica dental Tafalla',
-    'clínica dental Sangüesa', 'clínica dental Burlada',
-    'clínica dental Barañáin', 'clínica dental Zizur',
+    'óptica Pamplona', 'taller mecánico Pamplona', 'farmacia Pamplona',
+    'óptica Tudela', 'taller mecánico Tudela', 'farmacia Tudela',
+    'óptica Estella', 'taller mecánico Estella', 'farmacia Estella',
+    'óptica Tafalla', 'taller mecánico Tafalla', 'farmacia Tafalla',
+    'óptica Burlada', 'taller mecánico Burlada', 'farmacia Burlada',
+    'óptica Barañáin', 'taller mecánico Barañáin', 'farmacia Barañáin',
   ],
 
   // ===== TIER 5: Álava =====
   5: [
-    'clínica dental Vitoria', 'clínica estética Vitoria',
-    'fisioterapia Vitoria', 'podólogo Vitoria', 'veterinaria Vitoria',
-    'ortodoncia Vitoria', 'asesoría Vitoria', 'inmobiliaria Vitoria',
-    'despacho abogados Vitoria',
-    'clínica dental Llodio', 'clínica dental Amurrio',
-    'clínica dental Salvatierra',
+    'óptica Vitoria', 'taller mecánico Vitoria', 'farmacia Vitoria',
+    'óptica Llodio', 'taller mecánico Llodio', 'farmacia Llodio',
+    'óptica Amurrio', 'taller mecánico Amurrio', 'farmacia Amurrio',
   ],
 
   // ===== TIER 6: Cantabria + La Rioja + Burgos =====
   6: [
-    'clínica dental Santander', 'clínica estética Santander',
-    'fisioterapia Santander', 'veterinaria Santander',
-    'ortodoncia Santander', 'asesoría Santander',
-    'clínica dental Castro Urdiales', 'clínica dental Laredo',
-    'clínica dental Torrelavega', 'clínica dental Reinosa',
-    'clínica dental Logroño', 'clínica estética Logroño',
-    'fisioterapia Logroño', 'veterinaria Logroño',
-    'clínica dental Calahorra', 'clínica dental Haro',
-    'clínica dental Burgos', 'fisioterapia Burgos',
-    'clínica dental Miranda de Ebro', 'clínica dental Aranda de Duero',
+    'óptica Santander', 'taller mecánico Santander', 'farmacia Santander',
+    'óptica Torrelavega', 'taller mecánico Torrelavega', 'farmacia Torrelavega',
+    'óptica Castro Urdiales', 'taller mecánico Castro Urdiales', 'farmacia Castro Urdiales',
+    'óptica Logroño', 'taller mecánico Logroño', 'farmacia Logroño',
+    'óptica Calahorra', 'taller mecánico Calahorra', 'farmacia Calahorra',
+    'óptica Burgos', 'taller mecánico Burgos', 'farmacia Burgos',
+    'óptica Miranda de Ebro', 'taller mecánico Miranda de Ebro', 'farmacia Miranda de Ebro',
   ],
 
-  // ===== TIER 7: Resto Norte (Asturias, Galicia, León, Zaragoza, Huesca) =====
+  // ===== TIER 7: Norte (Asturias, Galicia, León, Aragón) =====
   7: [
-    'clínica dental Oviedo', 'clínica dental Gijón', 'clínica dental Avilés',
-    'clínica dental Mieres', 'clínica dental Langreo',
-    'clínica dental Coruña', 'clínica dental Vigo', 'clínica dental Santiago de Compostela',
-    'clínica dental Lugo', 'clínica dental Ourense', 'clínica dental Pontevedra',
-    'clínica dental Ferrol',
-    'clínica dental León', 'clínica dental Ponferrada', 'clínica dental Zamora',
-    'clínica dental Salamanca', 'clínica dental Valladolid', 'clínica dental Palencia',
-    'clínica dental Zaragoza', 'clínica dental Huesca', 'clínica dental Teruel',
-    'clínica dental Jaca',
+    'óptica Oviedo', 'taller mecánico Oviedo', 'farmacia Oviedo',
+    'óptica Gijón', 'taller mecánico Gijón', 'farmacia Gijón',
+    'óptica Coruña', 'taller mecánico Coruña', 'farmacia Coruña',
+    'óptica Vigo', 'taller mecánico Vigo', 'farmacia Vigo',
+    'óptica Santiago de Compostela', 'taller mecánico Santiago de Compostela', 'farmacia Santiago de Compostela',
+    'óptica León', 'taller mecánico León', 'farmacia León',
+    'óptica Zaragoza', 'taller mecánico Zaragoza', 'farmacia Zaragoza',
+    'óptica Huesca', 'taller mecánico Huesca', 'farmacia Huesca',
   ],
 
-  // ===== TIER 8: Resto España (Madrid, Cataluña, Valencia, Andalucía, Levante, Baleares) =====
+  // ===== TIER 8: Resto España =====
   8: [
-    'clínica dental Madrid', 'clínica dental Alcalá de Henares',
-    'clínica dental Móstoles', 'clínica dental Getafe', 'clínica dental Leganés',
-    'clínica dental Alcorcón', 'clínica dental Fuenlabrada',
-    'clínica dental Barcelona', 'clínica dental Hospitalet',
-    'clínica dental Badalona', 'clínica dental Sabadell', 'clínica dental Terrassa',
-    'clínica dental Mataró', 'clínica dental Girona', 'clínica dental Lleida',
-    'clínica dental Tarragona', 'clínica dental Reus',
-    'clínica dental Valencia', 'clínica dental Castellón', 'clínica dental Alicante',
-    'clínica dental Elche', 'clínica dental Torrevieja', 'clínica dental Gandía',
-    'clínica dental Sevilla', 'clínica dental Málaga', 'clínica dental Granada',
-    'clínica dental Córdoba', 'clínica dental Cádiz', 'clínica dental Almería',
-    'clínica dental Huelva', 'clínica dental Jaén', 'clínica dental Marbella',
-    'clínica dental Murcia', 'clínica dental Cartagena', 'clínica dental Lorca',
-    'clínica dental Palma', 'clínica dental Ibiza',
-    'clínica dental Tenerife', 'clínica dental Las Palmas',
+    'óptica Madrid', 'taller mecánico Madrid', 'farmacia Madrid',
+    'óptica Barcelona', 'taller mecánico Barcelona', 'farmacia Barcelona',
+    'óptica Valencia', 'taller mecánico Valencia', 'farmacia Valencia',
+    'óptica Sevilla', 'taller mecánico Sevilla', 'farmacia Sevilla',
+    'óptica Málaga', 'taller mecánico Málaga', 'farmacia Málaga',
+    'óptica Bilbao', 'taller mecánico Murcia', 'farmacia Murcia',
+    'óptica Palma', 'taller mecánico Palma', 'farmacia Palma',
+    'óptica Alicante', 'taller mecánico Alicante', 'farmacia Alicante',
+    'óptica Valladolid', 'taller mecánico Valladolid', 'farmacia Valladolid',
+    'óptica Granada', 'taller mecánico Granada', 'farmacia Granada',
   ],
 };
 
 export const MAX_TIER = 8;
 
-/** Mapea tier number → human-readable region name (para notificaciones). */
 export const TIER_NAMES: Record<number, string> = {
-  1: 'Irún + Hondarribia + Hendaya',
+  1: 'Irún + Hondarribia',
   2: 'Gipuzkoa',
   3: 'Bizkaia',
   4: 'Navarra',

@@ -4,11 +4,6 @@ export interface LeadInput {
   rating: number | null;
   review_count: number | null;
   website: string | null;
-  web_score: number | null;
-  web_visual_dated?: boolean | null;
-  web_visual_era?: string | null;
-  footer_year?: number | null;
-  has_online_shop?: boolean | null;
 }
 
 export interface QualifyResult {
@@ -25,10 +20,6 @@ const INVALID_EMAIL_PATTERNS = [
   /^noreply@/i, /^no-reply@/i, /@google\.com$/i, /@example\./i,
 ];
 
-// Umbral de antigüedad: footer copyright year debe ser <= este año
-// para que la web cuente como "antigua de verdad".
-export const OLD_WEBSITE_YEAR_CUTOFF = 2018;
-
 export function qualifyLead(l: LeadInput): QualifyResult {
   if (!l.email) return { qualified: false, reason: 'no_email' };
   if (INVALID_EMAIL_PATTERNS.some(rx => rx.test(l.email!))) {
@@ -44,23 +35,8 @@ export function qualifyLead(l: LeadInput): QualifyResult {
     return { qualified: false, reason: 'blacklisted' };
   }
 
-  // No website: golden case. Cualifica directo.
-  if (!l.website) return { qualified: true };
-
-  // Tienda online: fuera del alcance de un freelance (woocommerce/shopify/etc
-  // requiere mantenimiento, pasarelas de pago, stock...). No contactamos.
-  if (l.has_online_shop === true) {
-    return { qualified: false, reason: 'has_online_shop' };
-  }
-
-  // Tiene web. Solo cualifica si hay PRUEBA HONESTA de antigüedad:
-  // footer copyright year <= 2018. Sin año, no enviamos (evita afirmaciones falsas).
-  if (l.footer_year == null) {
-    return { qualified: false, reason: 'no_year_proof' };
-  }
-  if (l.footer_year > OLD_WEBSITE_YEAR_CUTOFF) {
-    return { qualified: false, reason: 'web_too_recent' };
-  }
+  // Tiene web: fuera del alcance. Solo contactamos negocios SIN web.
+  if (l.website) return { qualified: false, reason: 'has_website' };
 
   return { qualified: true };
 }

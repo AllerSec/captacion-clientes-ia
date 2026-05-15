@@ -4,7 +4,6 @@ const mockSearch = vi.fn();
 const mockUpsert = vi.fn();
 const mockUpdate = vi.fn();
 const mockGetByStatus = vi.fn();
-const mockFetch = vi.fn();
 
 vi.mock('../../src/services/apify.js', () => ({ searchBusinesses: mockSearch }));
 vi.mock('../../src/services/supabase.js', () => ({
@@ -16,7 +15,6 @@ vi.mock('../../src/services/supabase.js', () => ({
   markBurstDone: vi.fn(),
   countReadyToSend: vi.fn().mockResolvedValue(0),
 }));
-vi.mock('../../src/services/web-fetcher.js', () => ({ fetchWebsite: mockFetch }));
 vi.mock('../../src/lib/logger.js', () => ({
   logger: {
     info: vi.fn(), warn: vi.fn(), error: vi.fn(),
@@ -24,98 +22,77 @@ vi.mock('../../src/lib/logger.js', () => ({
   },
 }));
 vi.mock('../../src/core/health-monitor.js', () => ({ notifyError: vi.fn() }));
-vi.mock('../../src/services/web-screenshotter.js', () => ({
-  captureScreenshot: vi.fn().mockResolvedValue({ base64: null }),
-}));
-vi.mock('../../src/services/claude.js', () => ({
-  generateEmail: vi.fn(),
-  classifyReplyText: vi.fn(),
-  analyzeScreenshot: vi.fn(),
-}));
 
 describe('runScraper', () => {
   beforeEach(() => {
-    mockSearch.mockReset(); mockUpsert.mockReset(); mockUpdate.mockReset();
-    mockGetByStatus.mockReset(); mockFetch.mockReset();
+    mockSearch.mockReset(); mockUpsert.mockReset();
+    mockUpdate.mockReset(); mockGetByStatus.mockReset();
   });
 
-  it('end-to-end: scrape, analyze (no website), filter, promote', async () => {
-    mockSearch.mockResolvedValue([
-      {
-        place_id: 'p1', business_name: 'Clínica X', email: 'a@b.com',
-        rating: 4.7, review_count: 50, website: null,
-        category: 'd', address: '', city: 'Bilbao', province: 'Bizkaia', phone: '',
-      },
-    ]);
-    mockUpsert.mockResolvedValue({
-      id: 'lead-1', status: 'NEW',
-      place_id: 'p1', business_name: 'Clínica X', email: 'a@b.com',
+  it('end-to-end: scrape, analyze (no website), promote to READY_TO_SEND', async () => {
+    mockSearch.mockResolvedValue([{
+      place_id: 'p1', business_name: 'Taller X', email: 'a@b.com',
       rating: 4.7, review_count: 50, website: null,
+      category: 'taller', address: '', city: 'Bilbao', province: 'Bizkaia', phone: '',
+    }]);
+    mockUpsert.mockResolvedValue({
+      id: 'lead-1', status: 'NEW', place_id: 'p1', business_name: 'Taller X',
+      email: 'a@b.com', rating: 4.7, review_count: 50, website: null,
     });
-    // Two getLeadsByStatus calls: first for NEW (after upsert), then for ANALYZED (after analyze)
     mockGetByStatus
-      .mockResolvedValueOnce([
-        { id: 'lead-1', business_name: 'Clínica X', website: null,
-          email: 'a@b.com', rating: 4.7, review_count: 50 },
-      ])
-      .mockResolvedValueOnce([
-        { id: 'lead-1', business_name: 'Clínica X', website: null,
-          email: 'a@b.com', rating: 4.7, review_count: 50, web_score: 100 },
-      ]);
+      .mockResolvedValueOnce([{
+        id: 'lead-1', business_name: 'Taller X', website: null,
+        email: 'a@b.com', rating: 4.7, review_count: 50,
+      }])
+      .mockResolvedValueOnce([{
+        id: 'lead-1', business_name: 'Taller X', website: null,
+        email: 'a@b.com', rating: 4.7, review_count: 50,
+      }]);
 
     const { runScraper } = await import('../../src/jobs/scraper.js');
-    await runScraper(['clínica dental Bilbao']);
+    await runScraper(['taller mecánico Bilbao']);
 
-    expect(mockSearch).toHaveBeenCalledWith('clínica dental Bilbao', expect.any(Number));
+    expect(mockSearch).toHaveBeenCalledWith('taller mecánico Bilbao', expect.any(Number));
     expect(mockUpsert).toHaveBeenCalled();
-    // Lead with no website → web_score=100 set on ANALYZED step
     expect(mockUpdate).toHaveBeenCalledWith('lead-1', expect.objectContaining({
-      status: 'ANALYZED', web_score: 100,
+      status: 'ANALYZED', web_issues: ['no_website'],
     }));
-    // After filter, qualified → READY_TO_SEND
     expect(mockUpdate).toHaveBeenCalledWith('lead-1', expect.objectContaining({
       status: 'READY_TO_SEND',
     }));
   });
 
-  it('marks unqualified lead as SKIPPED', async () => {
+  it('skips lead with website immediately', async () => {
     mockSearch.mockResolvedValue([]);
     mockGetByStatus
-      .mockResolvedValueOnce([])  // no NEW leads to analyze
-      .mockResolvedValueOnce([
-        // Pre-existing ANALYZED lead with low rating → should SKIP
-        { id: 'lead-2', business_name: 'X', website: null, email: 'a@b.com',
-          rating: 3.0, review_count: 50, web_score: 100 },
-      ]);
+      .mockResolvedValueOnce([{
+        id: 'lead-2', business_name: 'Taller Y', website: 'https://y.com',
+        email: 'a@b.com', rating: 4.5, review_count: 30,
+      }])
+      .mockResolvedValueOnce([]);
 
     const { runScraper } = await import('../../src/jobs/scraper.js');
     await runScraper([]);
 
     expect(mockUpdate).toHaveBeenCalledWith('lead-2', expect.objectContaining({
-      status: 'SKIPPED',
+      status: 'SKIPPED', notes: 'has_website',
     }));
   });
 
-  it('analyzes lead with website by fetching and scoring', async () => {
+  it('skips lead with low rating (no web)', async () => {
     mockSearch.mockResolvedValue([]);
     mockGetByStatus
-      .mockResolvedValueOnce([
-        { id: 'lead-3', business_name: 'Y', website: 'https://y.com',
-          email: 'a@b.com', rating: 4.5, review_count: 30 },
-      ])
+      .mockResolvedValueOnce([{
+        id: 'lead-3', business_name: 'Taller Z', website: null,
+        email: 'a@b.com', rating: 3.0, review_count: 50,
+      }])
       .mockResolvedValueOnce([]);
-    mockFetch.mockResolvedValue({
-      url: 'https://y.com', status: 200, html: '<html><body>old</body></html>',
-      sizeBytes: 100, durationMs: 800,
-    });
 
     const { runScraper } = await import('../../src/jobs/scraper.js');
     await runScraper([]);
 
-    expect(mockFetch).toHaveBeenCalledWith('https://y.com');
-    // Should set ANALYZED with some web_score (web is bad → high score)
     expect(mockUpdate).toHaveBeenCalledWith('lead-3', expect.objectContaining({
-      status: 'ANALYZED',
+      status: 'SKIPPED',
     }));
   });
 });

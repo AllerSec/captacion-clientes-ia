@@ -6,12 +6,12 @@ import { generateEmail } from '../services/claude.js';
 import { sendEmail } from '../services/gmail.js';
 import { canSendNow } from '../core/send-policy.js';
 import { buildUserPrompt, htmlToText, pickVariant } from '../core/email-composer.js';
-import { SYSTEM_PROMPT } from '../prompts/system.js';
+import { buildSystemPrompt } from '../prompts/system.js';
+import { detectSector } from '../core/sector-detector.js';
 import { loadEnv } from '../config/env.js';
 import { logger } from '../lib/logger.js';
 import { notifyError } from '../core/health-monitor.js';
 import { validateGeneratedEmail } from '../core/email-validator.js';
-import type { WebSignals } from '../services/firecrawl.js';
 
 export interface RunSenderOpts {
   now?: Date;
@@ -78,9 +78,9 @@ export async function runSender(opts: RunSenderOpts = {}): Promise<void> {
       return;
     }
 
-    const sig = (lead as any).web_signals as WebSignals | null;
-    const scenario: 'no_web' | 'old_website' = lead.website ? 'old_website' : 'no_web';
-    const details = sig?.notableAntiquatedDetails ?? [];
+    const queryUsed = (lead as any).query_used as string ?? '';
+    const sectorInfo = detectSector(queryUsed);
+    const systemPrompt = buildSystemPrompt(sectorInfo);
 
     const userPrompt = buildUserPrompt({
       business_name: lead.business_name,
@@ -88,18 +88,12 @@ export async function runSender(opts: RunSenderOpts = {}): Promise<void> {
       city: lead.city ?? null,
       rating: lead.rating ?? null,
       review_count: lead.review_count ?? null,
-      website: lead.website ?? null,
-      web_issues: lead.web_issues ?? [],
-      web_visual_dated: (lead as any).web_visual_dated ?? null,
-      web_visual_era: (lead as any).web_visual_era ?? null,
-      web_visual_notes: (lead as any).web_visual_notes ?? null,
-      footer_year: sig?.footerCopyrightYear ?? null,
-      notable_antiquated_details: details,
-      visual_era: sig?.visualEra ?? null,
+      website: null, // siempre sin web en el nuevo sistema
+      web_issues: ['no_website'],
     });
 
     let generated = await generateEmail({
-      systemPrompt: SYSTEM_PROMPT,
+      systemPrompt,
       variantSnippet: variant.prompt_snippet,
       userPrompt,
     });
@@ -107,22 +101,22 @@ export async function runSender(opts: RunSenderOpts = {}): Promise<void> {
     let v = validateGeneratedEmail({
       subject: generated.subject,
       body: generated.body,
-      scenario,
-      details,
+      scenario: 'no_web',
+      details: [],
     });
     if (!v.ok) {
       log.warn({ leadId: lead.id, errors: v.errors }, 'email validation failed, retrying once');
       const retryPrompt = `${userPrompt}\n\nIMPORTANTE: tu intento anterior tuvo estos errores: ${v.errors.join(' | ')}. Corrígelos y vuelve a llamar a la tool send_email_draft.`;
       generated = await generateEmail({
-        systemPrompt: SYSTEM_PROMPT,
+        systemPrompt,
         variantSnippet: variant.prompt_snippet,
         userPrompt: retryPrompt,
       });
       v = validateGeneratedEmail({
         subject: generated.subject,
         body: generated.body,
-        scenario,
-        details,
+        scenario: 'no_web',
+        details: [],
       });
       if (!v.ok) {
         log.error({ leadId: lead.id, errors: v.errors }, 'email validation failed after retry, skipping');

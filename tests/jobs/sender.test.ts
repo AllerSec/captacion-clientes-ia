@@ -68,13 +68,13 @@ describe('runSender', () => {
     mockFirstSent.mockResolvedValue(null);
     mockGetVariants.mockResolvedValue([{ id: 'v1', name: 'v1_directo', prompt_snippet: '', weight: 1 }]);
     mockGetByStatus.mockResolvedValue([{
-      id: 'L1', business_name: 'Clínica X', email: 'a@b.com', rating: 4.7,
+      id: 'L1', business_name: 'Taller X', email: 'a@b.com', rating: 4.7,
       review_count: 50, website: null, web_issues: ['no_website'],
-      category: null, city: 'Bilbao',
+      category: null, city: 'Bilbao', query_used: 'taller mecánico Bilbao',
     }]);
     mockGenerate.mockResolvedValue({
-      subject: 'una idea',
-      body: `<p>Hola,</p><p>Vi que no tenéis web propia.</p><p>Os preparo una web de prueba <b>gratis y sin compromiso</b> para que veáis las diferencias.</p><p>¿Os interesa que os la pase? Se ve en un minuto.</p><p>Unax<br>unaxaller.com<br>Irún</p>`,
+      subject: 'Pregunta muy rápida',
+      body: `<p>Hola,</p><p>Te lo cuento muy rápido que sé que estáis liados.</p><p>Soy Unax, desarrollador web de Irún. Busqué talleres en Google Maps por la zona y no os encontré web, así que os escribo.</p><p>El caso es que hice la web de un taller hace poco (motosarretxe.com, por si le echáis un vistazo) y sé que a muchos mecánicos sin web se les escapan llamadas solo porque no aparecen cuando alguien busca en Google. Puede que a vosotros os pase lo mismo, puede que no jeje.</p><p>Os preparo una web de prueba <b>gratis y sin compromiso</b> para que veáis cómo quedaría la vuestra.</p><p>¿Os apetece echarle un vistazo?</p><p>¡Un saludo! Unax<br>unaxaller.com · Irún</p>`,
     });
     mockSendEmail.mockResolvedValue({ messageId: 'm1', threadId: 't1' });
 

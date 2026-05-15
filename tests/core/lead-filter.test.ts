@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { qualifyLead, type LeadInput } from '../../src/core/lead-filter.js';
 
 const base: LeadInput = {
-  business_name: 'Clínica X', email: 'info@x.es', rating: 4.5,
-  review_count: 50, website: null, web_score: null,
+  business_name: 'Taller X', email: 'info@x.es', rating: 4.5,
+  review_count: 50, website: null,
 };
 
 describe('qualifyLead — gates de reputación / contacto', () => {
@@ -33,37 +33,21 @@ describe('qualifyLead — gates de reputación / contacto', () => {
   });
 });
 
-describe('qualifyLead — footer year gate (web antigua)', () => {
-  it('qualifies website with footer year <= 2018', () => {
-    const r = qualifyLead({ ...base, website: 'https://x.com', footer_year: 2014 });
+describe('qualifyLead — regla de web', () => {
+  it('disqualifies any lead that has a website', () => {
+    const r = qualifyLead({ ...base, website: 'https://x.com' });
+    expect(r.qualified).toBe(false);
+    expect(r.reason).toBe('has_website');
+  });
+
+  it('qualifies lead with no website', () => {
+    const r = qualifyLead({ ...base, website: null });
     expect(r.qualified).toBe(true);
   });
 
-  it('qualifies edge case footer year = 2018', () => {
-    const r = qualifyLead({ ...base, website: 'https://x.com', footer_year: 2018 });
-    expect(r.qualified).toBe(true);
-  });
-
-  it('disqualifies website with footer year > 2018', () => {
-    const r = qualifyLead({ ...base, website: 'https://x.com', footer_year: 2022 });
+  it('disqualifies website regardless of rating', () => {
+    const r = qualifyLead({ ...base, website: 'https://x.com', rating: 5.0, review_count: 500 });
     expect(r.qualified).toBe(false);
-    expect(r.reason).toBe('web_too_recent');
-  });
-
-  it('disqualifies website with no footer year proof', () => {
-    const r = qualifyLead({ ...base, website: 'https://x.com', footer_year: null });
-    expect(r.qualified).toBe(false);
-    expect(r.reason).toBe('no_year_proof');
-  });
-
-  it('no_year_proof is independent of web_score (we do not infer antiquity from tech issues)', () => {
-    const r = qualifyLead({ ...base, website: 'https://x.com', web_score: 90, footer_year: null });
-    expect(r.qualified).toBe(false);
-    expect(r.reason).toBe('no_year_proof');
-  });
-
-  it('no website beats footer year (no website always qualifies)', () => {
-    const r = qualifyLead({ ...base, website: null, footer_year: 2024 });
-    expect(r.qualified).toBe(true);
+    expect(r.reason).toBe('has_website');
   });
 });
