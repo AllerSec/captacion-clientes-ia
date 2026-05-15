@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const scrapeMock = vi.fn();
+const searchMock = vi.fn();
 vi.mock('@mendable/firecrawl-js', () => ({
   default: class FakeFirecrawl {
     scrape = scrapeMock;
+    search = searchMock;
   },
 }));
 vi.mock('../../src/config/env.js', () => ({
@@ -14,6 +16,7 @@ import { scrapeForLeadAnalysis, resetFirecrawlClientForTests } from '../../src/s
 
 beforeEach(() => {
   scrapeMock.mockReset();
+  searchMock.mockReset();
   resetFirecrawlClientForTests();
 });
 
@@ -88,5 +91,62 @@ describe('scrapeForLeadAnalysis', () => {
     const r = await scrapeForLeadAnalysis('https://x.com');
     expect(r.ok).toBe(false);
     expect(scrapeMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+import { searchBusinessInfo } from '../../src/services/firecrawl.js';
+
+describe('searchBusinessInfo', () => {
+  it('returns top results with their snippets and markdown', async () => {
+    searchMock.mockResolvedValue({
+      web: [
+        {
+          url: 'https://www.tallerx.es',
+          title: 'Taller X — Reparación',
+          description: 'Taller mecánico en Bilbao. Contacto: info@tallerx.es',
+          markdown: '# Taller X\nContacto info@tallerx.es',
+        },
+        {
+          url: 'https://www.paginasamarillas.es/taller-x',
+          title: 'Taller X en Páginas Amarillas',
+          description: 'Ficha del negocio',
+          markdown: undefined,
+        },
+      ],
+    });
+
+    const r = await searchBusinessInfo('Taller X Bilbao');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.results).toHaveLength(2);
+    expect(r.results[0].url).toBe('https://www.tallerx.es');
+    expect(r.results[0].markdown).toContain('Contacto');
+  });
+
+  it('truncates markdown to 3000 chars to limit Claude tokens', async () => {
+    const huge = 'x'.repeat(10_000);
+    searchMock.mockResolvedValue({
+      web: [{ url: 'https://a.b', title: 't', description: 'd', markdown: huge }],
+    });
+    const r = await searchBusinessInfo('whatever');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.results[0].markdown?.length).toBeLessThanOrEqual(3000);
+  });
+
+  it('returns ok:false on Firecrawl error', async () => {
+    searchMock.mockRejectedValue(new Error('ENOTFOUND'));
+    const r = await searchBusinessInfo('whatever');
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error).toMatch(/ENOTFOUND/);
+  });
+
+  it('returns empty results when Firecrawl returns no web array', async () => {
+    searchMock.mockResolvedValue({});
+    const r = await searchBusinessInfo('whatever');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.results).toEqual([]);
   });
 });

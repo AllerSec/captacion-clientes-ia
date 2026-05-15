@@ -110,3 +110,50 @@ export async function scrapeForLeadAnalysis(url: string): Promise<FirecrawlResul
     durationMs: Date.now() - start,
   };
 }
+
+export interface SearchResult {
+  url: string;
+  title?: string;
+  description?: string;
+  markdown?: string;
+}
+
+export type SearchBusinessInfoResult =
+  | { ok: true; query: string; results: SearchResult[]; durationMs: number }
+  | { ok: false; query: string; error: string; durationMs: number };
+
+const SEARCH_MARKDOWN_MAX = 3000;
+
+export async function searchBusinessInfo(query: string): Promise<SearchBusinessInfoResult> {
+  const start = Date.now();
+  try {
+    const data = await getClient().search(query, {
+      sources: ['web'],
+      limit: 5,
+      scrapeOptions: {
+        formats: ['markdown'],
+        onlyMainContent: true,
+        timeout: 8000,
+      },
+    } as any);
+
+    const web = Array.isArray((data as any).web) ? ((data as any).web as any[]) : [];
+    const results: SearchResult[] = web.map(item => ({
+      url: String(item.url ?? ''),
+      title: typeof item.title === 'string' ? item.title : undefined,
+      description: typeof item.description === 'string' ? item.description : undefined,
+      markdown: typeof item.markdown === 'string'
+        ? item.markdown.slice(0, SEARCH_MARKDOWN_MAX)
+        : undefined,
+    })).filter(r => r.url.length > 0);
+
+    return { ok: true, query, results, durationMs: Date.now() - start };
+  } catch (err) {
+    return {
+      ok: false,
+      query,
+      error: err instanceof Error ? err.message : String(err),
+      durationMs: Date.now() - start,
+    };
+  }
+}
