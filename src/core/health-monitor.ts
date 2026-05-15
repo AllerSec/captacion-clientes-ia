@@ -23,7 +23,7 @@ export async function notifyError(severity: Severity, title: string, detail: str
   const text = `${title}\n\n${detail}`;
 
   try {
-    await sendEmail({ to: env.GMAIL_USER_EMAIL, subject, htmlBody: html, textBody: text });
+    await sendEmail({ to: env.GMAIL_USER_EMAIL ?? 'allerunax@gmail.com', subject, htmlBody: html, textBody: text });
   } catch (err) {
     logger.error({ err, title }, 'failed to deliver alert email');
   }

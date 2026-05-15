@@ -81,7 +81,7 @@ export async function getThreadMessages(threadId: string): Promise<ThreadMessage
   const env = loadEnv();
   const resp = await getGmail().users.threads.get({ userId: 'me', id: threadId, format: 'full' });
   const messages = resp.data.messages ?? [];
-  return messages.map(m => parseMessage(m, env.GMAIL_USER_EMAIL));
+  return messages.map(m => parseMessage(m, env.GMAIL_USER_EMAIL ?? ''));
 }
 
 function parseMessage(m: gmail_v1.Schema$Message, ourEmail: string): ThreadMessage {

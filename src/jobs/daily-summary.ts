@@ -72,7 +72,7 @@ export async function runDailySummary(): Promise<void> {
 
   try {
     await sendEmail({
-      to: env.GMAIL_USER_EMAIL,
+      to: env.GMAIL_USER_EMAIL ?? 'allerunax@gmail.com',
       subject: `[CAPTACION-IA] Resumen del ${today}`,
       htmlBody: html,
       textBody: text,
