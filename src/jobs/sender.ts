@@ -4,6 +4,7 @@ import {
 } from '../services/supabase.js';
 import { generateEmail } from '../services/claude.js';
 import { sendEmail } from '../services/gmail.js';
+import { sendEmailInstantly } from '../services/instantly.js';
 import { canSendNow } from '../core/send-policy.js';
 import { buildUserPrompt, htmlToText, pickVariant } from '../core/email-composer.js';
 import { buildSystemPrompt } from '../prompts/system.js';
@@ -132,12 +133,15 @@ export async function runSender(opts: RunSenderOpts = {}): Promise<void> {
       return;
     }
 
-    const gm = await sendEmail({
+    const sendParams = {
       to: lead.email,
       subject: generated.subject,
       htmlBody: generated.body,
       textBody: htmlToText(generated.body),
-    });
+    };
+    const gm = env.INSTANTLY_API_KEY
+      ? await sendEmailInstantly(sendParams)
+      : await sendEmail(sendParams);
 
     await recordEmailSent({
       lead_id: lead.id,
