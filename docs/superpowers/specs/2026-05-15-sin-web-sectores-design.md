@@ -117,34 +117,65 @@ Además: **reciprocidad** (el ejemplo ya hecho es un regalo antes de pedir nada)
 
 **Emails aprobados por sector:**
 
-Taller mecánico — subject: `sin web`
-```html
-<p>Hola,</p>
-<p>Vi que no tenéis web. Cuando alguien busca un taller en Google y no aparecéis, llama al siguiente. Sin más.</p>
-<p>Ya hice una para un taller de la zona: motosarretxe.com</p>
-<p>Os preparo una web de prueba <b>gratis y sin compromiso</b> para que veáis cómo quedaría la vuestra.</p>
-<p>¿Os la paso? Un minuto y la veis.</p>
-<p>Unax<br>unaxaller.com<br>Irún</p>
+Voz de referencia: coloquial, cercana, honesta. Estructura de Tomás Santoro (Efficy):
+1. Respeta el tiempo ("muy rápido que sé que estáis...")
+2. Quién eres + por qué escribes (dato específico de búsqueda real)
+3. El caso + ejemplo concreto + "puede que sí, puede que no jeje" (sin presión)
+4. Oferta gratis y sin compromiso
+5. Pregunta fácil de responder
+
+Taller mecánico — subject: `Pregunta muy rápida`
+```
+Hola,
+
+Te lo cuento muy rápido que sé que estáis liados.
+
+Soy Unax, desarrollador web de Irún. Estaba buscando talleres en Google Maps por la zona y no os encontré web, así que os escribo.
+
+El caso es que hice la web de un taller hace poco (motosarretxe.com, por si le echáis un vistazo) y sé que a muchos mecánicos sin web se les escapan llamadas solo porque no aparecen cuando alguien busca en Google. Puede que a vosotros os pase lo mismo, puede que no jeje.
+
+Os preparo una web de prueba <b>gratis y sin compromiso</b> para que veáis cómo quedaría la vuestra.
+
+¿Os apetece echarle un vistazo?
+
+¡Un saludo! Unax
+unaxaller.com · Irún
 ```
 
-Óptica — subject: `sin web`
-```html
-<p>Hola,</p>
-<p>Vi que no tenéis web propia. Hoy mucha gente busca ópticas en Google antes de salir de casa. Si no aparecéis, van a otra.</p>
-<p>Ya hice algo parecido para una óptica: anakaoptica.com</p>
-<p>Os preparo una web de prueba <b>gratis y sin compromiso</b> para que veáis cómo quedaría.</p>
-<p>¿Os interesa que os la pase? Se ve en un minuto.</p>
-<p>Unax<br>unaxaller.com<br>Irún</p>
+Óptica — subject: `Pregunta muy rápida`
+```
+Hola,
+
+Te lo cuento muy rápido que sé que estáis con el negocio a tope.
+
+Soy Unax, desarrollador web de Irún. Busqué ópticas en Google Maps por la zona y no os encontré web, así que os escribo.
+
+Hice la web de una óptica hace poco (anakaoptica.com) y lo que me cuentan es que mucha gente elige a qué óptica ir mirando en Google antes de salir de casa. Sin web, esa decisión la toma otra. Puede que ya lo sabéis, puede que no os había parado a pensarlo jeje.
+
+Os preparo una web de prueba <b>gratis y sin compromiso</b> para que veáis cómo quedaría la vuestra.
+
+¿Os la paso?
+
+¡Un saludo! Unax
+unaxaller.com · Irún
 ```
 
-Farmacia — subject: `sin web`
-```html
-<p>Hola,</p>
-<p>Vi que no tenéis web. Cada vez más gente comprueba horarios y servicios en Google antes de ir a una farmacia. Sin web, esa búsqueda os lleva a otra.</p>
-<p>Ya hice algo parecido para una farmacia: farmaciafernandezbera.com</p>
-<p>Os preparo una web de prueba <b>gratis y sin compromiso</b> para que veáis cómo quedaría.</p>
-<p>¿Os la paso? Es un minuto verla.</p>
-<p>Unax<br>unaxaller.com<br>Irún</p>
+Farmacia — subject: `Pregunta muy rápida`
+```
+Hola,
+
+Muy rápido que sé que estáis siempre con la farmacia a tope.
+
+Soy Unax, desarrollador web de Irún. Busqué farmacias en Google Maps por la zona y no os encontré web, así que os escribo.
+
+El caso es que hice la web de una farmacia hace poco (farmaciafernandezbera.com, por si le echáis un vistazo) y sé que a muchas farmacias sin web se les escapan clientes solo porque no aparecen cuando alguien busca en Google. Puede que a vosotros os pase lo mismo, puede que no jeje.
+
+Os preparo una web de prueba <b>gratis y sin compromiso</b> para que veáis cómo quedaría la vuestra.
+
+¿Os la paso? Es un minuto verla.
+
+¡Un saludo! Unax
+unaxaller.com · Irún
 ```
 
 ### `src/jobs/sender.ts`
