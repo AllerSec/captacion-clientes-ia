@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { qualifyLead, type LeadInput } from '../../src/core/lead-filter.js';
+import { qualifyLead, qualifyLeadPreEnrich, type LeadInput } from '../../src/core/lead-filter.js';
 
 const base: LeadInput = {
   business_name: 'Taller X', email: 'info@x.es', rating: 4.5,
@@ -49,5 +49,47 @@ describe('qualifyLead — regla de web', () => {
     const r = qualifyLead({ ...base, website: 'https://x.com', rating: 5.0, review_count: 500 });
     expect(r.qualified).toBe(false);
     expect(r.reason).toBe('has_website');
+  });
+});
+
+describe('qualifyLeadPreEnrich — gate antes de gastar Firecrawl', () => {
+  const baseNoMail = {
+    business_name: 'Taller X',
+    rating: 4.5,
+    review_count: 50,
+  };
+
+  it('qualifies when rating, reviews and brand are fine (no email needed)', () => {
+    expect(qualifyLeadPreEnrich(baseNoMail).qualified).toBe(true);
+  });
+
+  it('rejects low rating without calling Firecrawl', () => {
+    const r = qualifyLeadPreEnrich({ ...baseNoMail, rating: 3.5 });
+    expect(r.qualified).toBe(false);
+    expect(r.reason).toBe('low_rating');
+  });
+
+  it('rejects too few reviews without calling Firecrawl', () => {
+    const r = qualifyLeadPreEnrich({ ...baseNoMail, review_count: 10 });
+    expect(r.qualified).toBe(false);
+    expect(r.reason).toBe('few_reviews');
+  });
+
+  it('rejects blacklisted brands without calling Firecrawl', () => {
+    const r = qualifyLeadPreEnrich({ ...baseNoMail, business_name: 'Vital Dent Bilbao' });
+    expect(r.qualified).toBe(false);
+    expect(r.reason).toBe('blacklisted');
+  });
+
+  it('rejects when rating is null', () => {
+    const r = qualifyLeadPreEnrich({ ...baseNoMail, rating: null });
+    expect(r.qualified).toBe(false);
+    expect(r.reason).toBe('low_rating');
+  });
+
+  it('rejects when review_count is null', () => {
+    const r = qualifyLeadPreEnrich({ ...baseNoMail, review_count: null });
+    expect(r.qualified).toBe(false);
+    expect(r.reason).toBe('few_reviews');
   });
 });

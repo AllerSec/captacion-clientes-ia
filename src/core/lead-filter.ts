@@ -40,3 +40,22 @@ export function qualifyLead(l: LeadInput): QualifyResult {
 
   return { qualified: true };
 }
+
+export interface PreEnrichInput {
+  business_name: string;
+  rating: number | null;
+  review_count: number | null;
+}
+
+export function qualifyLeadPreEnrich(l: PreEnrichInput): QualifyResult {
+  if (l.rating == null || l.rating < 4.0) {
+    return { qualified: false, reason: 'low_rating' };
+  }
+  if (l.review_count == null || l.review_count < 15) {
+    return { qualified: false, reason: 'few_reviews' };
+  }
+  if (BLACKLIST.some(rx => rx.test(l.business_name))) {
+    return { qualified: false, reason: 'blacklisted' };
+  }
+  return { qualified: true };
+}
