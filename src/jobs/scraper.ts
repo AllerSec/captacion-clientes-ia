@@ -3,7 +3,8 @@ import {
   upsertLead, getLeadsByStatus, updateLead,
   getRecentlyUsedQueries, recordQueryUsed, getScraperState, setScraperTier, markBurstDone, countReadyToSend,
 } from '../services/supabase.js';
-import { qualifyLead } from '../core/lead-filter.js';
+import { qualifyLead, qualifyLeadPreEnrich } from '../core/lead-filter.js';
+import { enrichLead } from '../services/lead-enricher.js';
 import { logger } from '../lib/logger.js';
 import { notifyError } from '../core/health-monitor.js';
 import { pickNextQuery, burstQueries } from '../core/query-rotator.js';
@@ -84,8 +85,7 @@ function getTierForQuery(q: string): number {
 async function analyzeOneLead(lead: any): Promise<void> {
   const log = logger.child({ job: 'scraper' });
 
-  // Negocios con web: descartados directamente, sin gastar análisis.
-  // Solo contactamos negocios SIN web.
+  // 1. Tiene website en Maps: descartar inmediatamente.
   if (lead.website) {
     try {
       await updateLead(lead.id, { status: 'SKIPPED', notes: 'has_website' });
@@ -95,7 +95,95 @@ async function analyzeOneLead(lead: any): Promise<void> {
     return;
   }
 
-  // Sin web: filtramos por email/rating/reviews/blacklist y marcamos ANALYZED.
+  // 2. Tiene email en Maps: qualify normal y promover.
+  if (lead.email) {
+    return analyzeNoWebsiteWithEmail(lead);
+  }
+
+  // 3. Ni website ni email: pre-qualify barato; si pasa, enriquecer.
+  const pre = qualifyLeadPreEnrich({
+    business_name: lead.business_name,
+    rating: lead.rating ?? null,
+    review_count: lead.review_count ?? null,
+  });
+  if (!pre.qualified) {
+    try {
+      await updateLead(lead.id, { status: 'SKIPPED', notes: pre.reason ?? 'pre_filtered' });
+    } catch (err) {
+      log.error({ err, leadId: lead.id }, 'updateLead failed (pre_enrich_filtered)');
+    }
+    return;
+  }
+
+  log.info({ leadId: lead.id, business: lead.business_name, city: lead.city }, 'enrich: start');
+  const outcome = await enrichLead({
+    business_name: lead.business_name,
+    city: lead.city ?? null,
+    province: lead.province ?? null,
+    category: lead.category ?? null,
+  });
+  log.info({ leadId: lead.id, kind: outcome.kind, durationMs: outcome.durationMs }, 'enrich: done');
+
+  const enrichedAt = new Date().toISOString();
+
+  if (outcome.kind === 'has_real_website') {
+    try {
+      await updateLead(lead.id, {
+        status: 'SKIPPED',
+        notes: 'has_website_found_online',
+        enriched_at: enrichedAt,
+        enriched_via: 'search',
+        enriched_website: outcome.website_url,
+      });
+    } catch (err) {
+      log.error({ err, leadId: lead.id }, 'updateLead failed (has_website_found_online)');
+    }
+    return;
+  }
+
+  if (outcome.kind === 'email_found') {
+    try {
+      await updateLead(lead.id, {
+        email: outcome.email,
+        enriched_at: enrichedAt,
+        enriched_via: 'search',
+      });
+    } catch (err) {
+      log.error({ err, leadId: lead.id }, 'updateLead failed (email_found)');
+      return;
+    }
+    return analyzeNoWebsiteWithEmail({ ...lead, email: outcome.email });
+  }
+
+  if (outcome.kind === 'nothing_found') {
+    try {
+      await updateLead(lead.id, {
+        status: 'SKIPPED',
+        notes: 'no_email_after_enrich',
+        enriched_at: enrichedAt,
+        enriched_via: 'search',
+      });
+    } catch (err) {
+      log.error({ err, leadId: lead.id }, 'updateLead failed (no_email_after_enrich)');
+    }
+    return;
+  }
+
+  // outcome.kind === 'error'
+  try {
+    await updateLead(lead.id, {
+      status: 'SKIPPED',
+      notes: `enrich_error: ${outcome.error.slice(0, 200)}`,
+      enriched_at: enrichedAt,
+      enriched_via: 'search',
+    });
+  } catch (err) {
+    log.error({ err, leadId: lead.id }, 'updateLead failed (enrich_error)');
+  }
+}
+
+async function analyzeNoWebsiteWithEmail(lead: any): Promise<void> {
+  const log = logger.child({ job: 'scraper' });
   const check = qualifyLead({
     business_name: lead.business_name,
     email: lead.email ?? null,
@@ -108,7 +196,7 @@ async function analyzeOneLead(lead: any): Promise<void> {
     try {
       await updateLead(lead.id, { status: 'SKIPPED', notes: check.reason ?? 'pre_filtered' });
     } catch (err) {
-      log.error({ err, leadId: lead.id }, 'updateLead failed (pre_filtered)');
+      log.error({ err, leadId: lead.id }, 'updateLead failed (qualify reject)');
     }
     return;
   }
