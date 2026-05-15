@@ -112,6 +112,99 @@ export async function analyzeScreenshot(base64Jpeg: string): Promise<VisualJudgm
   return parsed;
 }
 
+export interface EnrichmentInput {
+  business_name: string;
+  city: string | null;
+  category: string | null;
+  results: Array<{
+    url: string;
+    title?: string;
+    description?: string;
+    markdown?: string;
+  }>;
+}
+
+export interface EnrichmentJudgment {
+  has_real_website: boolean;
+  website_url: string | null;
+  email: string | null;
+  reasoning: string;
+}
+
+const ENRICH_SYSTEM_PROMPT = `Eres un analista que decide, a partir de resultados de búsqueda en Internet, si un pequeño negocio español tiene web propia real y si aparece su email.
+
+NO cuentan como web propia:
+- Redes sociales (instagram.com, facebook.com, tiktok.com, linkedin.com, twitter.com, x.com, youtube.com).
+- Agregadores/directorios (paginasamarillas, doctoralia, yelp, tripadvisor, foursquare, infofarmacia, einforma, axesor, google.com/maps).
+- Páginas oficiales (.gob.es, ayuntamientos, colegios profesionales, asociaciones de comerciantes).
+- Marketplaces o webs de cadena/franquicia (multiopticas, alainafflelou, federopticos, farmaciaonline y similares): aunque tengan ficha del negocio, NO es web propia.
+
+SÍ cuenta: un dominio propio cuyo contenido describe claramente este negocio en particular (con sus horarios, dirección, servicios), no una cadena ni un directorio.
+
+Para email: extrae uno solo, el más probable de pertenecer al negocio. Descarta noreply@, no-reply@, info@google.com, dominios @example.
+
+Devuelve siempre el resultado mediante la tool report_enrichment.`;
+
+export async function judgeEnrichment(input: EnrichmentInput): Promise<EnrichmentJudgment> {
+  const env = loadEnv();
+  const userPrompt = buildEnrichUserPrompt(input);
+
+  const resp = await getClient().messages.create({
+    model: env.ANTHROPIC_MODEL,
+    max_tokens: 600,
+    system: ENRICH_SYSTEM_PROMPT,
+    tools: [
+      {
+        name: 'report_enrichment',
+        description: 'Reporta la decisión sobre la existencia de web propia y email del negocio.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            has_real_website: { type: 'boolean' },
+            website_url: { type: ['string', 'null'] },
+            email: { type: ['string', 'null'] },
+            reasoning: { type: 'string' },
+          },
+          required: ['has_real_website', 'website_url', 'email', 'reasoning'],
+        },
+      },
+    ],
+    tool_choice: { type: 'tool', name: 'report_enrichment' },
+    messages: [{ role: 'user', content: userPrompt }],
+  });
+
+  const toolUse = resp.content.find((b: any) => b.type === 'tool_use');
+  if (!toolUse || (toolUse as any).type !== 'tool_use') {
+    throw new Error('Claude judgeEnrichment: no tool_use / report_enrichment returned');
+  }
+  const parsed = (toolUse as any).input as Partial<EnrichmentJudgment>;
+  return {
+    has_real_website: Boolean(parsed.has_real_website),
+    website_url: typeof parsed.website_url === 'string' && parsed.website_url.length > 0
+      ? parsed.website_url
+      : null,
+    email: typeof parsed.email === 'string' && parsed.email.length > 0
+      ? parsed.email.trim()
+      : null,
+    reasoning: typeof parsed.reasoning === 'string' ? parsed.reasoning : '',
+  };
+}
+
+function buildEnrichUserPrompt(input: EnrichmentInput): string {
+  const header = `Negocio: ${input.business_name}\nCiudad: ${input.city ?? 'desconocida'}\nCategoría: ${input.category ?? 'desconocida'}\n\nResultados de búsqueda (top ${input.results.length}):`;
+  const body = input.results.map((r, i) => {
+    const lines = [
+      `--- Resultado ${i + 1} ---`,
+      `URL: ${r.url}`,
+      r.title ? `Título: ${r.title}` : '',
+      r.description ? `Snippet: ${r.description}` : '',
+      r.markdown ? `Contenido: ${r.markdown}` : '',
+    ].filter(s => s.length > 0);
+    return lines.join('\n');
+  }).join('\n\n');
+  return `${header}\n\n${body}\n\nDecide y llama a report_enrichment.`;
+}
+
 export async function classifyReplyText(body: string): Promise<ReplyKind> {
   const env = loadEnv();
   const prompt = `Clasifica el siguiente correo como UNA de estas tres categorías:
