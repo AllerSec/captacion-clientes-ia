@@ -33,6 +33,29 @@ describe('claude service', () => {
     const out = await classifyReplyText('algún texto');
     expect(out).toBe('human_reply');
   });
+
+  it('generateEmail retries on 529 overloaded and eventually succeeds', async () => {
+    const overload = Object.assign(new Error('overloaded'), { status: 529 });
+    mockCreate
+      .mockRejectedValueOnce(overload)
+      .mockResolvedValueOnce({
+        content: [{ type: 'tool_use', name: 'send_email_draft', input: { subject: 's', body: '<p>b</p>' } }],
+      });
+
+    const { generateEmail } = await import('../../src/services/claude.js');
+    const out = await generateEmail({ systemPrompt: 'sys', variantSnippet: '', userPrompt: 'p' });
+    expect(out.subject).toBe('s');
+    expect(mockCreate).toHaveBeenCalledTimes(2);
+  });
+
+  it('generateEmail propagates non-retryable errors immediately', async () => {
+    const bad = Object.assign(new Error('bad req'), { status: 400 });
+    mockCreate.mockRejectedValueOnce(bad);
+
+    const { generateEmail } = await import('../../src/services/claude.js');
+    await expect(generateEmail({ systemPrompt: 'sys', variantSnippet: '', userPrompt: 'p' })).rejects.toThrow();
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('judgeEnrichment', () => {

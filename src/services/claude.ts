@@ -1,11 +1,21 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { loadEnv } from '../config/env.js';
 import type { ReplyKind } from '../core/response-detector.js';
+import { withRetry } from '../lib/retry.js';
 
 let client: Anthropic | null = null;
 function getClient() {
   if (!client) client = new Anthropic({ apiKey: loadEnv().ANTHROPIC_API_KEY });
   return client;
+}
+
+function isRetryableAnthropicError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const status = (err as { status?: number }).status;
+  if (status === 529 || status === 503 || status === 502 || status === 429) return true;
+  const code = (err as { code?: string }).code;
+  if (code === 'ECONNRESET' || code === 'ETIMEDOUT' || code === 'ENOTFOUND') return true;
+  return false;
 }
 
 export interface GenerateEmailInput {
@@ -21,33 +31,36 @@ export interface GenerateEmailOutput {
 
 export async function generateEmail(input: GenerateEmailInput): Promise<GenerateEmailOutput> {
   const env = loadEnv();
-  const resp = await getClient().messages.create({
-    model: env.ANTHROPIC_MODEL,
-    max_tokens: 1200,
-    system: [
-      {
-        type: 'text',
-        text: input.systemPrompt + (input.variantSnippet ? '\n\n' + input.variantSnippet : ''),
-        cache_control: { type: 'ephemeral' },
-      } as any,
-    ],
-    tools: [
-      {
-        name: 'send_email_draft',
-        description: 'Devuelve el email generado en formato estructurado.',
-        input_schema: {
-          type: 'object',
-          properties: {
-            subject: { type: 'string', description: 'Asunto del email' },
-            body: { type: 'string', description: 'Cuerpo del email en HTML (solo <p> y <b>)' },
+  const resp = await withRetry(
+    () => getClient().messages.create({
+      model: env.ANTHROPIC_MODEL,
+      max_tokens: 1200,
+      system: [
+        {
+          type: 'text',
+          text: input.systemPrompt + (input.variantSnippet ? '\n\n' + input.variantSnippet : ''),
+          cache_control: { type: 'ephemeral' },
+        } as any,
+      ],
+      tools: [
+        {
+          name: 'send_email_draft',
+          description: 'Devuelve el email generado en formato estructurado.',
+          input_schema: {
+            type: 'object',
+            properties: {
+              subject: { type: 'string', description: 'Asunto del email' },
+              body: { type: 'string', description: 'Cuerpo del email en HTML (solo <p> y <b>)' },
+            },
+            required: ['subject', 'body'],
           },
-          required: ['subject', 'body'],
         },
-      },
-    ],
-    tool_choice: { type: 'tool', name: 'send_email_draft' },
-    messages: [{ role: 'user', content: input.userPrompt }],
-  });
+      ],
+      tool_choice: { type: 'tool', name: 'send_email_draft' },
+      messages: [{ role: 'user', content: input.userPrompt }],
+    }),
+    { maxAttempts: 4, baseDelayMs: 1000, shouldRetry: isRetryableAnthropicError },
+  );
 
   const toolUse = resp.content.find(b => b.type === 'tool_use');
   if (!toolUse || toolUse.type !== 'tool_use') {
