@@ -13,6 +13,7 @@ const schema = z.object({
   GMAIL_REFRESH_TOKEN: z.string().min(1).optional(),
   GMAIL_USER_EMAIL: z.string().email().optional(),
   INSTANTLY_API_KEY: z.string().min(1).optional(),
+  INSTANTLY_CAMPAIGN_ID: z.string().uuid().optional(),
   INSTANTLY_FROM_EMAIL: z.string().email().optional(),
   INSTANTLY_FROM_NAME: z.string().default('Unax'),
   SENDER_NAME: z.string().min(1),
@@ -26,6 +27,14 @@ const schema = z.object({
   DAILY_QUOTA_OVERRIDE: z.string().optional().transform(v => v ? parseInt(v) : undefined),
   SEND_MIN_INTERVAL_MIN: z.string().default('2').transform(v => parseInt(v)),
   SEND_MAX_INTERVAL_MIN: z.string().default('5').transform(v => parseInt(v)),
+}).superRefine((val, ctx) => {
+  if (val.INSTANTLY_API_KEY && !val.INSTANTLY_CAMPAIGN_ID) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['INSTANTLY_CAMPAIGN_ID'],
+      message: 'INSTANTLY_CAMPAIGN_ID is required when INSTANTLY_API_KEY is set',
+    });
+  }
 });
 
 export type Env = z.infer<typeof schema>;

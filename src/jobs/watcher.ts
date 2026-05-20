@@ -1,48 +1,73 @@
-import { getLeadsByStatus, updateLead, recordMetric, getEmailByLead } from '../services/supabase.js';
-import { getThreadMessages } from '../services/gmail.js';
-import { classifyReplyText } from '../services/claude.js';
-import { classifyReply } from '../core/response-detector.js';
+import { updateLead, recordMetric, getEmailByLead } from '../services/supabase.js';
+import {
+  listLeadsByStatus,
+  listLeadsContactedSince,
+  getLeadDbIdFromCustom,
+  type InstantlyLead,
+} from '../services/instantly.js';
 import { logger } from '../lib/logger.js';
 import { notifyError } from '../core/health-monitor.js';
+import { getWatcherCursor, setWatcherCursor } from '../services/supabase.js';
 
 export async function runWatcher(): Promise<void> {
   try {
     const log = logger.child({ job: 'watcher' });
-    const leads = await getLeadsByStatus('CONTACTED', 200);
-    log.info({ count: leads.length }, 'checking contacted leads');
+    const now = new Date();
 
-    for (const lead of leads) {
-      try {
-        const email = await getEmailByLead(lead.id);
-        if (!email) continue;
+    const lastCheck = await getWatcherCursor();
+    const since = lastCheck ?? new Date(Date.now() - 24 * 3600_000);
 
-        const messages = await getThreadMessages(email.gmail_thread_id);
-        const incoming = messages.filter((m: { isFromUs: boolean }) => !m.isFromUs);
-        if (incoming.length === 0) continue;
-
-        const latest = incoming.sort((a: { internalDate: number }, b: { internalDate: number }) =>
-          b.internalDate - a.internalDate
-        )[0];
-        const kind = await classifyReply(latest.bodyText, classifyReplyText);
-
-        const now = new Date().toISOString();
-        if (kind === 'human_reply') {
-          await updateLead(lead.id, { status: 'RESPONDED', responded_at: now });
-          await recordMetric('replied', lead.id, email.variant_id ?? null, { thread: email.gmail_thread_id });
-          log.info({ leadId: lead.id }, 'human reply detected');
-        } else if (kind === 'auto_reply') {
-          await updateLead(lead.id, { status: 'AUTO_REPLY' });
-          await recordMetric('auto_reply', lead.id, email.variant_id ?? null, {});
-        } else if (kind === 'bounce') {
-          await updateLead(lead.id, { status: 'BOUNCED' });
-          await recordMetric('bounced', lead.id, email.variant_id ?? null, {});
-        }
-      } catch (err) {
-        log.error({ err, leadId: lead.id }, 'watcher failed for lead');
+    const contacted = await listLeadsContactedSince(since);
+    log.info({ count: contacted.length, since: since.toISOString() }, 'leads newly contacted');
+    for (const lead of contacted) {
+      const dbId = getLeadDbIdFromCustom(lead);
+      if (!dbId) {
+        log.warn({ instantlyId: lead.id }, 'contacted lead has no lead_db_id custom var');
+        continue;
       }
+      const email = await getEmailByLead(dbId);
+      await updateLead(dbId, {
+        status: 'CONTACTED',
+        contacted_at: lead.timestamp_last_contact ?? new Date().toISOString(),
+      });
+      await recordMetric('sent', dbId, email?.variant_id ?? null, { instantly_lead_id: lead.id });
     }
+
+    const replied = await listLeadsByStatus('FILTER_VAL_REPLIED');
+    log.info({ count: replied.length }, 'leads with replies');
+    for (const lead of replied) {
+      const dbId = getLeadDbIdFromCustom(lead);
+      if (!dbId) {
+        log.warn({ instantlyId: lead.id }, 'replied lead has no lead_db_id custom var');
+        continue;
+      }
+      const email = await getEmailByLead(dbId);
+      await updateLead(dbId, {
+        status: 'RESPONDED',
+        responded_at: lead.timestamp_last_reply ?? new Date().toISOString(),
+      });
+      await recordMetric('replied', dbId, email?.variant_id ?? null, { instantly_lead_id: lead.id });
+    }
+
+    const bounced = await listLeadsByStatus('FILTER_VAL_BOUNCED');
+    log.info({ count: bounced.length }, 'leads bounced');
+    for (const lead of bounced) {
+      const dbId = getLeadDbIdFromCustom(lead);
+      if (!dbId) {
+        log.warn({ instantlyId: lead.id }, 'bounced lead has no lead_db_id custom var');
+        continue;
+      }
+      const email = await getEmailByLead(dbId);
+      await updateLead(dbId, { status: 'BOUNCED' });
+      await recordMetric('bounced', dbId, email?.variant_id ?? null, { instantly_lead_id: lead.id });
+    }
+
+    await setWatcherCursor(now);
   } catch (err) {
     await notifyError('error', 'Watcher crashed', err instanceof Error ? (err.stack ?? err.message) : String(err));
     throw err;
   }
 }
+
+// Re-export for tests that previously imported helpers
+export { type InstantlyLead };

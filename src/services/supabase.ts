@@ -130,6 +130,25 @@ export async function getEmailByLead(leadId: string) {
   return data?.[0] ?? null;
 }
 
+const WATCHER_CURSOR_KEY = 'watcher_cursor';
+
+export async function getWatcherCursor(): Promise<Date | null> {
+  const { data, error } = await getClient()
+    .from('alert_dedup')
+    .select('last_sent')
+    .eq('key', WATCHER_CURSOR_KEY)
+    .limit(1);
+  if (error) throw new Error(`getWatcherCursor: ${error.message}`);
+  return data?.[0]?.last_sent ? new Date(data[0].last_sent) : null;
+}
+
+export async function setWatcherCursor(when: Date): Promise<void> {
+  const { error } = await getClient()
+    .from('alert_dedup')
+    .upsert({ key: WATCHER_CURSOR_KEY, last_sent: when.toISOString() });
+  if (error) throw new Error(`setWatcherCursor: ${error.message}`);
+}
+
 export async function shouldFireAlert(key: string, cooldownHours = 6): Promise<boolean> {
   const { data, error } = await getClient()
     .from('alert_dedup').select('last_sent').eq('key', key).limit(1);

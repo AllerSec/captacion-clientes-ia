@@ -1,12 +1,10 @@
 import {
-  getLeadsByStatus, updateLead, countSentToday, getLastSentAt, getFirstSentAt,
-  getActiveVariants, recordEmailSent, recordMetric,
+  getLeadsByStatus, updateLead, getActiveVariants, recordMetric, recordEmailSent,
 } from '../services/supabase.js';
 import { generateEmail } from '../services/claude.js';
-import { sendEmail } from '../services/gmail.js';
-import { sendEmailInstantly } from '../services/instantly.js';
+import { addLeadToCampaign } from '../services/instantly.js';
 import { canSendNow } from '../core/send-policy.js';
-import { buildUserPrompt, htmlToText, pickVariant } from '../core/email-composer.js';
+import { buildUserPrompt, pickVariant } from '../core/email-composer.js';
 import { buildSystemPrompt } from '../prompts/system.js';
 import { detectSector } from '../core/sector-detector.js';
 import { loadEnv } from '../config/env.js';
@@ -23,38 +21,13 @@ export async function runSender(opts: RunSenderOpts = {}): Promise<void> {
     const env = loadEnv();
     const log = logger.child({ job: 'sender' });
 
-    if (env.KILL_SWITCH) {
-      log.info('KILL_SWITCH active, skipping send');
+    const policy = canSendNow({ killSwitch: env.KILL_SWITCH });
+    if (!policy.allowed) {
+      log.info({ reason: policy.reason }, 'send skipped');
       return;
     }
 
     const now = opts.now ?? new Date();
-
-    const sentToday = await countSentToday();
-    const lastSent = await getLastSentAt();
-    const firstSent = await getFirstSentAt();
-
-    const minutesSinceLastSend = lastSent
-      ? (now.getTime() - lastSent.getTime()) / 60_000
-      : Number.POSITIVE_INFINITY;
-    const daysSinceFirstSend = firstSent
-      ? Math.floor((now.getTime() - firstSent.getTime()) / 86_400_000) + 1
-      : 1;
-
-    const policy = canSendNow({
-      now,
-      sentToday,
-      daysSinceFirstSend,
-      minutesSinceLastSend,
-      minIntervalMin: env.SEND_MIN_INTERVAL_MIN,
-      maxIntervalMin: env.SEND_MAX_INTERVAL_MIN,
-      quotaOverride: env.DAILY_QUOTA_OVERRIDE,
-    });
-
-    if (!policy.allowed) {
-      log.info({ reason: policy.reason, sentToday, quota: policy.quota }, 'send skipped');
-      return;
-    }
 
     const variants = await getActiveVariants();
     if (variants.length === 0) {
@@ -89,7 +62,7 @@ export async function runSender(opts: RunSenderOpts = {}): Promise<void> {
       city: lead.city ?? null,
       rating: lead.rating ?? null,
       review_count: lead.review_count ?? null,
-      website: null, // siempre sin web en el nuevo sistema
+      website: null,
       web_issues: ['no_website'],
     });
 
@@ -127,34 +100,45 @@ export async function runSender(opts: RunSenderOpts = {}): Promise<void> {
     }
 
     if (env.DRY_RUN) {
-      log.info({ leadId: lead.id, subject: generated.subject, body: generated.body }, '[DRY_RUN] would send');
-      // Mark this lead so subsequent dry-run iterations pick a different one.
+      log.info({ leadId: lead.id, subject: generated.subject, body: generated.body }, '[DRY_RUN] would queue');
       await updateLead(lead.id, { status: 'SKIPPED', notes: 'dry_run_preview' });
       return;
     }
 
-    const sendParams = {
+    const result = await addLeadToCampaign({
       to: lead.email,
       subject: generated.subject,
       htmlBody: generated.body,
-      textBody: htmlToText(generated.body),
-    };
-    const gm = env.INSTANTLY_API_KEY
-      ? await sendEmailInstantly(sendParams)
-      : await sendEmail(sendParams);
+      leadDbId: lead.id,
+    });
 
+    if (result.skipped) {
+      log.info({ leadId: lead.id, email: lead.email }, 'lead skipped by Instantly (already in workspace)');
+      await updateLead(lead.id, { status: 'SKIPPED', notes: 'instantly_duplicate' });
+      return;
+    }
+
+    // emails_sent row created at queue time so the generated content is preserved
+    // for audit even if Instantly never actually ships. sent_at = queued_at; the
+    // watcher updates lead.status to CONTACTED once Instantly confirms real send.
     await recordEmailSent({
       lead_id: lead.id,
       subject: generated.subject,
       body: generated.body,
       variant_id: variant.id,
-      gmail_message_id: gm.messageId,
-      gmail_thread_id: gm.threadId,
+      gmail_message_id: result.instantlyLeadId,
+      gmail_thread_id: '',
     });
-    await updateLead(lead.id, { status: 'CONTACTED', contacted_at: now.toISOString() });
-    await recordMetric('sent', lead.id, variant.id, { variant_name: variant.name });
+    await updateLead(lead.id, {
+      status: 'QUEUED',
+      notes: `instantly_lead:${result.instantlyLeadId}|queued_at:${now.toISOString()}`,
+    });
+    await recordMetric('queued', lead.id, variant.id, {
+      variant_name: variant.name,
+      instantly_lead_id: result.instantlyLeadId,
+    });
 
-    log.info({ leadId: lead.id, business: lead.business_name }, 'email sent');
+    log.info({ leadId: lead.id, instantlyLeadId: result.instantlyLeadId, business: lead.business_name }, 'lead queued in Instantly');
   } catch (err) {
     await notifyError('error', 'Sender crashed', err instanceof Error ? (err.stack ?? err.message) : String(err));
     throw err;
