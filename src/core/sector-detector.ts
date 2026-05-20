@@ -22,9 +22,10 @@ const SECTOR_MAP: Array<{ pattern: RegExp; info: SectorInfo }> = [
   },
 ];
 
-export function detectSector(query: string): SectorInfo {
+export function detectSector(...hints: Array<string | null | undefined>): SectorInfo {
+  const haystack = hints.filter((h): h is string => typeof h === 'string' && h.length > 0).join(' ');
   for (const { pattern, info } of SECTOR_MAP) {
-    if (pattern.test(query)) return info;
+    if (pattern.test(haystack)) return info;
   }
   return { sector: 'unknown', exampleUrl: null, clientWord: 'clientes', sectorLabel: 'negocio' };
 }

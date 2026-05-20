@@ -52,8 +52,8 @@ export async function runSender(opts: RunSenderOpts = {}): Promise<void> {
       return;
     }
 
-    const queryUsed = (lead as any).query_used as string ?? '';
-    const sectorInfo = detectSector(queryUsed);
+    const queryUsed = (lead as any).query_used as string | undefined;
+    const sectorInfo = detectSector(queryUsed, lead.category, lead.business_name);
     const systemPrompt = buildSystemPrompt(sectorInfo);
 
     const userPrompt = buildUserPrompt({
@@ -77,6 +77,7 @@ export async function runSender(opts: RunSenderOpts = {}): Promise<void> {
       body: generated.body,
       scenario: 'no_web',
       details: [],
+      requiredExampleUrl: sectorInfo.exampleUrl,
     });
     if (!v.ok) {
       log.warn({ leadId: lead.id, errors: v.errors }, 'email validation failed, retrying once');

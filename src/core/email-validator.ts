@@ -3,6 +3,7 @@ export interface ValidateInput {
   body: string;
   scenario: 'no_web' | 'old_website';
   details: string[];   // notableAntiquatedDetails — autoriza menciones específicas
+  requiredExampleUrl?: string | null;
 }
 
 export type ValidateResult =
@@ -51,6 +52,13 @@ export function validateGeneratedEmail(input: ValidateInput): ValidateResult {
   }
 
   if (!SIGNATURE_RX.test(body)) errors.push('body: firma no encontrada');
+
+  if (input.requiredExampleUrl) {
+    const escaped = input.requiredExampleUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (!new RegExp(escaped, 'i').test(body)) {
+      errors.push(`body: no menciona la URL de ejemplo "${input.requiredExampleUrl}"`);
+    }
+  }
 
   return errors.length === 0 ? { ok: true } : { ok: false, errors };
 }

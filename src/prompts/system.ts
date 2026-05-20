@@ -39,6 +39,12 @@ ESTRUCTURA EXACTA (4 párrafos + firma):
 5. CTA: una pregunta corta. Varía entre: "¿Os la paso?", "¿Os apetece echarle un vistazo?", "¿Os la paso? Es un minuto verla."
 6. Firma exacta: "¡Un saludo! Unax\\nunaxaller.com · Irún"
 
+${exampleUrl ? `URL DE REFERENCIA OBLIGATORIA:
+- El párrafo 3 DEBE incluir literalmente el dominio "${exampleUrl}" entre paréntesis después de la palabra "${sectorLabel}".
+- Formato exacto: "...hice la web de un${sectorLabel === 'óptica' ? 'a' : ''} ${sectorLabel} hace poco (${exampleUrl}, por si le echáis un vistazo)..."
+- NO uses variaciones tipo "otro taller de la zona" o "una farmacia hace poco" sin la URL.
+- Si no mencionas exactamente "${exampleUrl}" el email será RECHAZADO.` : ''}
+
 NEGRITAS:
 - UNA sola negrita en todo el email: exactamente "gratis y sin compromiso" dentro de la oferta.
 - Nunca en otro sitio.

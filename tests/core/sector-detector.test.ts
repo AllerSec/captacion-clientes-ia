@@ -39,4 +39,13 @@ describe('detectSector', () => {
     expect(detectSector('óptica Bilbao').clientWord).toBe('clientes');
     expect(detectSector('farmacia Pamplona').clientWord).toBe('clientes');
   });
+
+  it('finds the sector across multiple hint arguments', () => {
+    expect(detectSector('', 'Farmacia López', null).sector).toBe('farmacia');
+    expect(detectSector(null, 'Auto repair', 'Taller Etxebeste').sector).toBe('taller');
+  });
+
+  it('returns unknown when all hints are empty/null', () => {
+    expect(detectSector(null, '', undefined).sector).toBe('unknown');
+  });
 });
