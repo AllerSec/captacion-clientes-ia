@@ -4,12 +4,26 @@
  * Solo contactamos negocios SIN web: el sistema descarta los que tienen.
  */
 export const QUERIES_BY_TIER: Record<number, string[]> = {
-  // ===== TIER 1: Irún + Hondarribia + Bera (Tecmac) =====
+  // ===== TIER 1: Irún + comarca + Bera + Bidasoa (alrededor de Tecmac/Unax) =====
   1: [
+    // Gipuzkoa Oriental (Bidasoa + Donostialdea Este)
     'óptica Irún', 'taller mecánico Irún', 'farmacia Irún',
     'óptica Hondarribia', 'taller mecánico Hondarribia', 'farmacia Hondarribia',
+    'óptica Pasaia', 'taller mecánico Pasaia', 'farmacia Pasaia',
+    'óptica Lezo', 'taller mecánico Lezo', 'farmacia Lezo',
+    'óptica Errenteria', 'taller mecánico Errenteria', 'farmacia Errenteria',
+    'óptica Oiartzun', 'taller mecánico Oiartzun', 'farmacia Oiartzun',
+    'óptica Astigarraga', 'taller mecánico Astigarraga', 'farmacia Astigarraga',
+    // Navarra Norte (alrededor Bera/Tecmac)
+    'óptica Bera', 'taller mecánico Bera', 'farmacia Bera',
+    'óptica Lesaka', 'taller mecánico Lesaka', 'farmacia Lesaka',
+    'óptica Elizondo', 'taller mecánico Elizondo', 'farmacia Elizondo',
+    'óptica Baztan', 'taller mecánico Baztan', 'farmacia Baztan',
+    // Industria (mecanizado) en Bidasoa + Navarra Norte
     'mecanizado Bera', 'taller de mecanizado Bera', 'caldereria Bera',
     'mecanizado Lesaka', 'taller de mecanizado Lesaka',
+    'mecanizado Irún', 'caldereria Irún', 'ingeniería industrial Irún',
+    'mecanizado Oiartzun', 'mecanizado Errenteria',
   ],
 
   // ===== TIER 2: Resto Gipuzkoa =====
@@ -19,12 +33,19 @@ export const QUERIES_BY_TIER: Record<number, string[]> = {
     'óptica Eibar', 'taller mecánico Eibar', 'farmacia Eibar',
     'óptica Zarautz', 'taller mecánico Zarautz', 'farmacia Zarautz',
     'óptica Hernani', 'taller mecánico Hernani', 'farmacia Hernani',
-    'óptica Errenteria', 'taller mecánico Errenteria', 'farmacia Errenteria',
     'óptica Andoain', 'taller mecánico Andoain', 'farmacia Andoain',
     'óptica Lasarte', 'taller mecánico Lasarte', 'farmacia Lasarte',
+    'óptica Urnieta', 'taller mecánico Urnieta', 'farmacia Urnieta',
+    'óptica Usurbil', 'taller mecánico Usurbil', 'farmacia Usurbil',
+    'óptica Beasain', 'taller mecánico Beasain', 'farmacia Beasain',
+    'óptica Azpeitia', 'taller mecánico Azpeitia', 'farmacia Azpeitia',
+    'óptica Azkoitia', 'taller mecánico Azkoitia', 'farmacia Azkoitia',
+    'óptica Zumarraga', 'taller mecánico Zumarraga', 'farmacia Zumarraga',
+    'óptica Hondarribia', 'taller mecánico Hondarribia', 'farmacia Hondarribia',
     'mecanizado Eibar', 'caldereria Eibar', 'ingeniería industrial Eibar',
     'mecanizado Bergara', 'mecanizado Mondragón', 'mecanizado Arrasate',
     'mecanizado Tolosa', 'tornería industrial Gipuzkoa',
+    'mecanizado Beasain', 'mecanizado Azpeitia',
   ],
 
   // ===== TIER 3: Bizkaia =====
@@ -47,8 +68,20 @@ export const QUERIES_BY_TIER: Record<number, string[]> = {
     'óptica Tafalla', 'taller mecánico Tafalla', 'farmacia Tafalla',
     'óptica Burlada', 'taller mecánico Burlada', 'farmacia Burlada',
     'óptica Barañáin', 'taller mecánico Barañáin', 'farmacia Barañáin',
+    'óptica Altsasu', 'taller mecánico Altsasu', 'farmacia Altsasu',
+    'óptica Alsasua', 'taller mecánico Alsasua', 'farmacia Alsasua',
+    'óptica Zizur Mayor', 'taller mecánico Zizur Mayor', 'farmacia Zizur Mayor',
+    'óptica Villava', 'taller mecánico Villava', 'farmacia Villava',
+    'óptica Ansoáin', 'taller mecánico Ansoáin', 'farmacia Ansoáin',
+    'óptica Berriozar', 'taller mecánico Berriozar', 'farmacia Berriozar',
+    'óptica Huarte', 'taller mecánico Huarte', 'farmacia Huarte',
+    'óptica Sangüesa', 'taller mecánico Sangüesa', 'farmacia Sangüesa',
+    'óptica Cintruénigo', 'taller mecánico Cintruénigo', 'farmacia Cintruénigo',
+    'óptica Corella', 'taller mecánico Corella', 'farmacia Corella',
+    'óptica Peralta', 'taller mecánico Peralta', 'farmacia Peralta',
     'mecanizado Pamplona', 'caldereria Pamplona', 'ingeniería industrial Pamplona',
     'mecanizado Tudela', 'fabricación metálica Navarra',
+    'mecanizado Altsasu', 'mecanizado Tafalla', 'mecanizado Estella',
   ],
 
   // ===== TIER 5: Álava =====

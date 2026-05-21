@@ -19,10 +19,16 @@ export interface ComposerInput {
 
 export function buildUserPrompt(input: ComposerInput): string {
   const cleanedName = cleanBusinessName(input.business_name);
+  // Apify devuelve a veces ciudades con doble forma "Donostia / San Sebastián"
+  // o "Vitoria / Gasteiz". Nos quedamos solo con la primera forma para que el
+  // email diga "buscando talleres en Donostia" en vez de la doble.
+  const cleanedCity = input.city
+    ? input.city.split(/\s*\/\s*/)[0].trim()
+    : null;
   const lines: string[] = [
     `NOMBRE_NEGOCIO: ${cleanedName}`,
     `CATEGORIA: ${input.category ?? 'desconocida'}`,
-    `CIUDAD: ${input.city ?? 'no indicada'}`,
+    `CIUDAD: ${cleanedCity ?? 'no indicada'}`,
     `Rating: ${input.rating ?? 'n/a'} (${input.review_count ?? 0} reseñas)`,
   ];
 
