@@ -28,6 +28,21 @@ describe('detectSector', () => {
     expect(r.exampleUrl).toBe('farmaciafernandezbera.com');
   });
 
+  it('detects industria from mecanizado query', () => {
+    const r = detectSector('mecanizado Bera');
+    expect(r.sector).toBe('industria');
+    expect(r.exampleUrl).toBe('tecmac.es');
+  });
+
+  it('detects industria from caldereria', () => {
+    expect(detectSector('caldereria Pamplona').sector).toBe('industria');
+  });
+
+  it('industria takes precedence over taller when mecanizado appears', () => {
+    // "mecanizado" contiene "mecán" pero queremos industria, no taller.
+    expect(detectSector('taller de mecanizado Eibar').sector).toBe('industria');
+  });
+
   it('returns unknown for unrecognized query', () => {
     const r = detectSector('restaurante Madrid');
     expect(r.sector).toBe('unknown');

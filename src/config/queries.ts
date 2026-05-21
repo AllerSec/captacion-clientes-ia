@@ -4,10 +4,12 @@
  * Solo contactamos negocios SIN web: el sistema descarta los que tienen.
  */
 export const QUERIES_BY_TIER: Record<number, string[]> = {
-  // ===== TIER 1: Irún + Hondarribia =====
+  // ===== TIER 1: Irún + Hondarribia + Bera (Tecmac) =====
   1: [
     'óptica Irún', 'taller mecánico Irún', 'farmacia Irún',
     'óptica Hondarribia', 'taller mecánico Hondarribia', 'farmacia Hondarribia',
+    'mecanizado Bera', 'taller de mecanizado Bera', 'caldereria Bera',
+    'mecanizado Lesaka', 'taller de mecanizado Lesaka',
   ],
 
   // ===== TIER 2: Resto Gipuzkoa =====
@@ -20,6 +22,9 @@ export const QUERIES_BY_TIER: Record<number, string[]> = {
     'óptica Errenteria', 'taller mecánico Errenteria', 'farmacia Errenteria',
     'óptica Andoain', 'taller mecánico Andoain', 'farmacia Andoain',
     'óptica Lasarte', 'taller mecánico Lasarte', 'farmacia Lasarte',
+    'mecanizado Eibar', 'caldereria Eibar', 'ingeniería industrial Eibar',
+    'mecanizado Bergara', 'mecanizado Mondragón', 'mecanizado Arrasate',
+    'mecanizado Tolosa', 'tornería industrial Gipuzkoa',
   ],
 
   // ===== TIER 3: Bizkaia =====
@@ -42,6 +47,8 @@ export const QUERIES_BY_TIER: Record<number, string[]> = {
     'óptica Tafalla', 'taller mecánico Tafalla', 'farmacia Tafalla',
     'óptica Burlada', 'taller mecánico Burlada', 'farmacia Burlada',
     'óptica Barañáin', 'taller mecánico Barañáin', 'farmacia Barañáin',
+    'mecanizado Pamplona', 'caldereria Pamplona', 'ingeniería industrial Pamplona',
+    'mecanizado Tudela', 'fabricación metálica Navarra',
   ],
 
   // ===== TIER 5: Álava =====

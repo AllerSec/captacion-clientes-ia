@@ -1,4 +1,4 @@
-export type Sector = 'taller' | 'optica' | 'farmacia' | 'unknown';
+export type Sector = 'taller' | 'optica' | 'farmacia' | 'industria' | 'unknown';
 
 export interface SectorInfo {
   sector: Sector;
@@ -8,6 +8,11 @@ export interface SectorInfo {
 }
 
 const SECTOR_MAP: Array<{ pattern: RegExp; info: SectorInfo }> = [
+  // industria va ANTES que taller porque "mecanizado" matchearía /mecán/.
+  {
+    pattern: /mecanizado|caldereria|calder[eé]r[ií]a|ingenier[ií]a industrial|fabricaci[oó]n met[aá]lica|industria del acero|tornerí|torner[ií]a/i,
+    info: { sector: 'industria', exampleUrl: 'tecmac.es', clientWord: 'clientes', sectorLabel: 'empresa de mecanizado' },
+  },
   {
     pattern: /taller|mecán/i,
     info: { sector: 'taller', exampleUrl: 'motosarretxe.com', clientWord: 'clientes', sectorLabel: 'taller' },
