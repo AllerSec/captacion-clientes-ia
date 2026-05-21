@@ -34,12 +34,14 @@ vi.mock('../../src/lib/logger.js', () => ({
 }));
 vi.mock('../../src/core/health-monitor.js', () => ({ notifyError: vi.fn() }));
 
-const validBody = `<p>Hola,</p><p>Te lo cuento muy rápido que sé que estáis liados.</p><p>Soy Unax, desarrollador web de Irún. Busqué talleres en Google Maps por la zona y no os encontré web, así que os escribo.</p><p>El caso es que hice la web de un taller hace poco (motosarretxe.com, por si le echáis un vistazo) y sé que a muchos mecánicos sin web se les escapan llamadas solo porque no aparecen cuando alguien busca en Google. Puede que a vosotros os pase lo mismo, puede que no jeje.</p><p>Os preparo una web de prueba <b>gratis y sin compromiso</b> para que veáis cómo quedaría la vuestra.</p><p>¿Os apetece echarle un vistazo?</p><p>¡Un saludo! Unax<br>unaxaller.com · Irún</p>`;
+const validSubject = 'Presencia en Google para Taller X: Cómo superar a Taller Juanjo sin pagar miles de euros de golpe';
+const validBody = `<p style="margin:0 0 8px 0">Hola, equipo de Taller X:</p><p style="margin:0 0 8px 0">Soy Unax, desarrollador web en Irún. Os escribo porque buscando talleres en Bilbao a través de Google Maps, he visto que <b>Taller Juanjo</b> aparece en los primeros resultados y se está llevando llamadas de la zona que os corresponden, simplemente por tener una web optimizada. Vosotros no aparecéis ahí porque no tenéis página web.</p><p style="margin:0 0 8px 0">Hace poco trabajé con un taller (<a href="https://motosarretxe.com">motosarretxe.com</a>) solucionando esto mismo. Desde que lanzamos su sistema, les entra un flujo constante de llamadas que antes elegían a otros talleres de la zona solo porque los encontraban antes en Google.</p><p style="margin:0 0 8px 0">Sé que las agencias tradicionales os van a pedir entre 2.000€ y 3.000€ de golpe por haceros la web y el posicionamiento. Por eso yo trabajo con un modelo de <b>Renting Web</b>:</p><p style="margin:0 0 4px 0"><b>0€ de pago inicial:</b> No desembolsáis nada por el diseño, el desarrollo ni la optimización de vuestra ficha de Google.</p><p style="margin:0 0 4px 0"><b>Cuota fija de 149€/mes (como el gestor):</b> Incluye la web completa (hasta 5 secciones), hosting, posicionamiento continuo, sistema para conseguir reseñas y soporte por WhatsApp.</p><p style="margin:0 0 8px 0"><b>Garantía de 30 días:</b> Si el primer mes no os convence, os devuelvo el dinero. Sin preguntas.</p><p style="margin:0 0 8px 0">Si os interesa y queréis que os explique en 5 minutos por teléfono cómo lo haríamos, decidme qué día os viene bien que os llame.</p><p style="margin:0 0 8px 0">Un saludo,<br>Unax Aller<br><a href="https://unaxaller.com">unaxaller.com</a> · Irún</p>`;
 
 const leadRow = {
   id: 'L1', business_name: 'Taller X', email: 'a@b.com', rating: 4.7,
   review_count: 50, website: null, web_issues: ['no_website'],
   category: null, city: 'Bilbao', query_used: 'taller mecánico Bilbao',
+  top_competitors: [{ name: 'Taller Juanjo', website: 'https://tallerjuanjo.com' }],
 };
 
 describe('runSender', () => {
@@ -51,7 +53,7 @@ describe('runSender', () => {
   it('queues one lead in Instantly and marks lead QUEUED', async () => {
     mockGetVariants.mockResolvedValue([{ id: 'v1', name: 'v1_directo', prompt_snippet: '', weight: 1 }]);
     mockGetByStatus.mockResolvedValue([leadRow]);
-    mockGenerate.mockResolvedValue({ subject: 'Pregunta muy rápida', body: validBody });
+    mockGenerate.mockResolvedValue({ subject: validSubject, body: validBody });
     mockAddLead.mockResolvedValue({ instantlyLeadId: 'iid-123', skipped: false });
 
     const { runSender } = await import('../../src/jobs/sender.js');
@@ -59,7 +61,7 @@ describe('runSender', () => {
 
     expect(mockAddLead).toHaveBeenCalledWith(expect.objectContaining({
       to: 'a@b.com',
-      subject: 'Pregunta muy rápida',
+      subject: validSubject,
       leadDbId: 'L1',
     }));
     expect(mockRecordSent).toHaveBeenCalledWith(expect.objectContaining({
@@ -73,7 +75,7 @@ describe('runSender', () => {
   it('marks lead SKIPPED when Instantly reports duplicate', async () => {
     mockGetVariants.mockResolvedValue([{ id: 'v1', name: 'v1', prompt_snippet: '', weight: 1 }]);
     mockGetByStatus.mockResolvedValue([leadRow]);
-    mockGenerate.mockResolvedValue({ subject: 'Pregunta muy rápida', body: validBody });
+    mockGenerate.mockResolvedValue({ subject: validSubject, body: validBody });
     mockAddLead.mockResolvedValue({ instantlyLeadId: '', skipped: true });
 
     const { runSender } = await import('../../src/jobs/sender.js');

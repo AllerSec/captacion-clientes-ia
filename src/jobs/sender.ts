@@ -64,6 +64,7 @@ export async function runSender(opts: RunSenderOpts = {}): Promise<void> {
       review_count: lead.review_count ?? null,
       website: null,
       web_issues: ['no_website'],
+      top_competitors: (lead as any).top_competitors ?? null,
     });
 
     let generated = await generateEmail({
@@ -72,12 +73,15 @@ export async function runSender(opts: RunSenderOpts = {}): Promise<void> {
       userPrompt,
     });
 
+    const topComps = ((lead as any).top_competitors ?? []) as Array<{ name: string; website: string }>;
+    const requiredCompetitorName = topComps.length > 0 ? topComps[0].name : null;
     let v = validateGeneratedEmail({
       subject: generated.subject,
       body: generated.body,
       scenario: 'no_web',
       details: [],
       requiredExampleUrl: sectorInfo.exampleUrl,
+      requiredCompetitorName,
     });
     if (!v.ok) {
       log.warn({ leadId: lead.id, errors: v.errors }, 'email validation failed, retrying once');

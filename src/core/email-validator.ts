@@ -4,14 +4,15 @@ export interface ValidateInput {
   scenario: 'no_web' | 'old_website';
   details: string[];   // notableAntiquatedDetails — autoriza menciones específicas
   requiredExampleUrl?: string | null;
+  requiredCompetitorName?: string | null;
 }
 
 export type ValidateResult =
   | { ok: true }
   | { ok: false; errors: string[] };
 
+// Mencionar "HTTPS" como palabra suelta queda raro. Permitido dentro de href="https://...".
 const FORBIDDEN_TECH = [
-  /\bhttps\b/i,           // cualquier mención de HTTPS quema (no es algo natural en el cuerpo)
   /carga\s*lenta/i,
   /web\s*lenta/i,
   /carga\s*pesada/i,
@@ -20,8 +21,15 @@ const FORBIDDEN_TECH = [
   /no\s*est[áa]\s*optimi/i,
 ];
 
+function bodyMentionsHttpsAsWord(body: string): boolean {
+  // Quita las URLs href="https://..." y luego busca "https" como palabra suelta.
+  const stripped = body.replace(/href="https?:\/\/[^"]*"/gi, '');
+  return /\bhttps\b/i.test(stripped);
+}
+
 const SIGNATURE_RX = /unaxaller\.com/i;
-const EXPECTED_SUBJECT = /^pregunta muy r[aá]pida$/i;
+// Subject debe mencionar "Presencia en Google" y "{NOMBRE_NEGOCIO}" o "competencia" (fallback).
+const EXPECTED_SUBJECT_RX = /presencia en google/i;
 
 export function validateGeneratedEmail(input: ValidateInput): ValidateResult {
   const errors: string[] = [];
@@ -30,25 +38,32 @@ export function validateGeneratedEmail(input: ValidateInput): ValidateResult {
   const detailsMentionMobile = input.details.some(d => /móvil/i.test(d));
 
   if (subj.length === 0) errors.push('subject: vacío');
-  if (!EXPECTED_SUBJECT.test(subj)) errors.push('subject: debe ser exactamente "Pregunta muy rápida"');
+  if (!EXPECTED_SUBJECT_RX.test(subj)) errors.push('subject: debe contener "Presencia en Google"');
   if (/móvil/i.test(subj)) errors.push('subject: contiene "móvil" (prohibido)');
-  if (/[!¡]/.test(subj)) errors.push('subject: contiene exclamación');
 
   for (const rx of FORBIDDEN_TECH) {
     if (rx.test(body)) {
       errors.push(`body: afirmación técnica prohibida (${rx.source})`);
     }
   }
+  if (bodyMentionsHttpsAsWord(body)) {
+    errors.push('body: contiene "HTTPS" como palabra suelta');
+  }
 
   if (/móvil/i.test(body) && !detailsMentionMobile) {
     errors.push('body: contiene "móvil" pero details no lo justifica');
   }
 
-  const boldCount = (body.match(/<b>/gi) ?? []).length;
-  if (boldCount !== 1) errors.push(`body: ${boldCount} <b> (debe ser exactamente 1)`);
-
-  if (boldCount === 1 && !/<b>\s*gratis y sin compromiso\s*<\/b>/i.test(body)) {
-    errors.push('body: la negrita debe envolver exactamente "gratis y sin compromiso"');
+  // El nuevo formato Renting Web tiene 3 bullets en negrita + posiblemente "Renting Web"
+  // + competidor en negrita. Pedimos al menos los tres anchors de la oferta.
+  if (!/<b>0€ de pago inicial:?<\/b>/i.test(body)) {
+    errors.push('body: falta el bullet "<b>0€ de pago inicial:</b>"');
+  }
+  if (!/<b>Cuota fija de 149€\/mes/i.test(body)) {
+    errors.push('body: falta el bullet "<b>Cuota fija de 149€/mes..."');
+  }
+  if (!/<b>Garantía de 30 días:?<\/b>/i.test(body)) {
+    errors.push('body: falta el bullet "<b>Garantía de 30 días:</b>"');
   }
 
   if (!SIGNATURE_RX.test(body)) errors.push('body: firma no encontrada');
@@ -57,6 +72,13 @@ export function validateGeneratedEmail(input: ValidateInput): ValidateResult {
     const escaped = input.requiredExampleUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     if (!new RegExp(escaped, 'i').test(body)) {
       errors.push(`body: no menciona la URL de ejemplo "${input.requiredExampleUrl}"`);
+    }
+  }
+
+  if (input.requiredCompetitorName) {
+    const escaped = input.requiredCompetitorName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (!new RegExp(escaped, 'i').test(body)) {
+      errors.push(`body: no menciona al competidor "${input.requiredCompetitorName}"`);
     }
   }
 

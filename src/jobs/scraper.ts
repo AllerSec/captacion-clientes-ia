@@ -50,10 +50,27 @@ export async function runScraperAuto(): Promise<void> {
       try {
         const places = await searchBusinesses(q, 50);
         log.info({ query: q, tier, count: places.length }, 'fetched places');
+        // Top 3 competidores CON web de esta query, en el orden devuelto por Apify
+        // (Apify devuelve por relevancia/ranking en Google). Sirven para personalizar
+        // el cold email con un competidor real al que el lead "está regalando clientes".
+        const topCompetitors = places
+          .filter(p => p.website && p.website.trim().length > 0)
+          .slice(0, 3)
+          .map(p => ({ name: p.business_name, website: p.website as string }));
         let inserted = 0;
         for (const p of places) {
           try {
-            await upsertLead({ ...p, status: 'NEW' });
+            // Si el lead tiene web no lo personalizaremos (queda SKIPPED), pero igual
+            // adjuntamos los competidores para auditoría/futura reactivación.
+            // Excluimos al propio lead del array de competidores por place_id/website.
+            const competitorsForLead = topCompetitors.filter(c =>
+              c.website !== p.website && c.name !== p.business_name
+            ).slice(0, 3);
+            await upsertLead({
+              ...p,
+              status: 'NEW',
+              top_competitors: competitorsForLead.length > 0 ? competitorsForLead : null,
+            });
             inserted++;
           } catch (err) {
             log.warn({ err: (err as Error).message, place_id: p.place_id }, 'upsert failed');

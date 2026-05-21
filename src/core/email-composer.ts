@@ -12,6 +12,7 @@ export interface ComposerInput {
   footer_year?: number | null;
   notable_antiquated_details?: string[];
   visual_era?: 'pre-2010' | 'early-2010s' | 'late-2010s' | 'modern' | null;
+  top_competitors?: Array<{ name: string; website: string }> | null;
 }
 
 export function buildUserPrompt(input: ComposerInput): string {
@@ -21,6 +22,20 @@ export function buildUserPrompt(input: ComposerInput): string {
     `CIUDAD: ${input.city ?? 'no indicada'}`,
     `Rating: ${input.rating ?? 'n/a'} (${input.review_count ?? 0} reseñas)`,
   ];
+
+  const comps = input.top_competitors ?? [];
+  if (comps.length > 0) {
+    lines.push(
+      `COMPETIDOR_PRINCIPAL: ${comps[0].name} (${comps[0].website})`,
+    );
+    if (comps.length > 1) {
+      lines.push(
+        `OTROS_COMPETIDORES: ${comps.slice(1).map(c => `${c.name} (${c.website})`).join(' | ')}`,
+      );
+    }
+  } else {
+    lines.push('COMPETIDOR_PRINCIPAL: (sin datos — usa fórmula genérica "los que aparecen primero en Google")');
+  }
 
   if (!input.website) {
     lines.push('');

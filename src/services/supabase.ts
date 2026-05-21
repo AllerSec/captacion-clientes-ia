@@ -27,6 +27,7 @@ export interface LeadRow {
   enriched_at?: string | null;
   enriched_via?: string | null;
   enriched_website?: string | null;
+  top_competitors?: Array<{ name: string; website: string }> | null;
   created_at?: string;
 }
 
