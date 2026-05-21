@@ -263,7 +263,20 @@ export async function runScraper(queries: string[]): Promise<void> {
     log.info({ queries }, 'starting scraper (manual mode)');
     for (const q of queries) {
       const places = await searchBusinesses(q, 50);
-      for (const p of places) await upsertLead({ ...p, status: 'NEW' });
+      const topCompetitors = places
+        .filter(p => p.website && p.website.trim().length > 0)
+        .slice(0, 3)
+        .map(p => ({ name: p.business_name, website: p.website as string }));
+      for (const p of places) {
+        const competitorsForLead = topCompetitors
+          .filter(c => c.website !== p.website && c.name !== p.business_name)
+          .slice(0, 3);
+        await upsertLead({
+          ...p,
+          status: 'NEW',
+          top_competitors: competitorsForLead.length > 0 ? competitorsForLead : null,
+        });
+      }
     }
     await analyzeAndFilter();
   } catch (err) {

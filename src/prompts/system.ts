@@ -44,6 +44,13 @@ VOZ Y TONO:
 - Tuteo plural: "os", "vosotros", "vuestra".
 - Saludo: "Hola, equipo de {{NOMBRE_NEGOCIO}}:"
 
+REGLAS CRÍTICAS DE OUTPUT (incumplirlas = email RECHAZADO):
+- El body EMPIEZA EXACTAMENTE con \`<p style="margin:0 0 8px 0">Hola, equipo de {{NOMBRE_NEGOCIO}}:</p>\`. PROHIBIDO añadir ninguna línea, pregunta, gancho o frase antes del saludo.
+- PROHIBIDO añadir párrafos intermedios entre los del template. Si la plantilla tiene 8 párrafos, tu output tiene 8 párrafos. Ni uno más.
+- PROHIBIDO mencionar dos veces el caso de éxito. Solo un párrafo "Hace poco trabajé con...".
+- PROHIBIDO inventar frases tipo "He montado web a otro X", "Sé qué mueve la aguja", "¿Cuánta gente os busca?". Solo el texto literal de la plantilla.
+- Si crees que falta algo o que el texto puede ser "mejor", IGNÓRALO. Entrega el template literal.
+
 ESTRUCTURA EXACTA (cópiala literal, solo sustituye los placeholders entre llaves):
 
 SUBJECT (no incluyas etiquetas <p>):

@@ -1,3 +1,5 @@
+import { isLikelyFranchise } from './business-name.js';
+
 export interface LeadInput {
   business_name: string;
   email: string | null;
@@ -34,6 +36,9 @@ export function qualifyLead(l: LeadInput): QualifyResult {
   if (BLACKLIST.some(rx => rx.test(l.business_name))) {
     return { qualified: false, reason: 'blacklisted' };
   }
+  if (isLikelyFranchise(l.business_name)) {
+    return { qualified: false, reason: 'franchise' };
+  }
 
   // Tiene web: fuera del alcance. Solo contactamos negocios SIN web.
   if (l.website) return { qualified: false, reason: 'has_website' };
@@ -56,6 +61,9 @@ export function qualifyLeadPreEnrich(l: PreEnrichInput): QualifyResult {
   }
   if (BLACKLIST.some(rx => rx.test(l.business_name))) {
     return { qualified: false, reason: 'blacklisted' };
+  }
+  if (isLikelyFranchise(l.business_name)) {
+    return { qualified: false, reason: 'franchise' };
   }
   return { qualified: true };
 }

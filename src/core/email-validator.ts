@@ -68,6 +68,33 @@ export function validateGeneratedEmail(input: ValidateInput): ValidateResult {
 
   if (!SIGNATURE_RX.test(body)) errors.push('body: firma no encontrada');
 
+  // El body DEBE empezar con el saludo. No se permiten líneas antes (preguntas
+  // tipo "¿Cuánta gente os busca?" que Claude se inventa).
+  const trimmedBody = body.trimStart();
+  if (!/^<p[^>]*>Hola, equipo de /i.test(trimmedBody)) {
+    errors.push('body: debe empezar con "<p>Hola, equipo de ..." (sin líneas extra antes)');
+  }
+
+  // Solo UN párrafo de caso de éxito. Si el modelo lo duplica ("Hace poco trabajé..."
+  // dos veces, una inventada y otra del template), rechazar.
+  const caseStudyMatches = body.match(/Hace poco trabaj[eé]/gi) ?? [];
+  if (caseStudyMatches.length > 1) {
+    errors.push(`body: aparece "Hace poco trabajé" ${caseStudyMatches.length} veces (debe ser 1)`);
+  }
+
+  // Frases inventadas conocidas que Claude tiende a meter — bloquear.
+  const FORBIDDEN_PHRASES = [
+    /¿Cu[aá]nta gente os busca/i,
+    /He montado web a otr/i,
+    /s[eé] qu[eé] tipo de cosas mueven la aguja/i,
+    /s[eé] qu[eé] cosas mueven la aguja/i,
+  ];
+  for (const rx of FORBIDDEN_PHRASES) {
+    if (rx.test(body)) {
+      errors.push(`body: contiene frase inventada (${rx.source})`);
+    }
+  }
+
   if (input.requiredExampleUrl) {
     const escaped = input.requiredExampleUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     if (!new RegExp(escaped, 'i').test(body)) {

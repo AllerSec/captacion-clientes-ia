@@ -1,3 +1,5 @@
+import { cleanBusinessName } from './business-name.js';
+
 export interface ComposerInput {
   business_name: string;
   category: string | null;
@@ -16,8 +18,9 @@ export interface ComposerInput {
 }
 
 export function buildUserPrompt(input: ComposerInput): string {
+  const cleanedName = cleanBusinessName(input.business_name);
   const lines: string[] = [
-    `NOMBRE_NEGOCIO: ${input.business_name}`,
+    `NOMBRE_NEGOCIO: ${cleanedName}`,
     `CATEGORIA: ${input.category ?? 'desconocida'}`,
     `CIUDAD: ${input.city ?? 'no indicada'}`,
     `Rating: ${input.rating ?? 'n/a'} (${input.review_count ?? 0} reseñas)`,
