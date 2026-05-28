@@ -43,6 +43,24 @@ export function getClient(): SupabaseClient {
   return client;
 }
 
+const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+
+// Supabase/Cloudflare occasionally returns transient 522/timeouts that surface
+// either as a thrown fetch error or as a non-JSON HTML body. Retrying with
+// exponential backoff keeps a momentary blip from crashing the whole cron job.
+export async function withRetry<T>(fn: () => Promise<T>, retries = 3, baseMs = 500): Promise<T> {
+  let last: unknown;
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      last = e;
+      if (i < retries) await sleep(baseMs * 2 ** i);
+    }
+  }
+  throw last;
+}
+
 export async function upsertLead(row: Partial<LeadRow> & { place_id: string; business_name: string }): Promise<LeadRow> {
   const { data, error } = await getClient()
     .from('leads')
@@ -54,14 +72,16 @@ export async function upsertLead(row: Partial<LeadRow> & { place_id: string; bus
 }
 
 export async function getLeadsByStatus(status: string, limit = 100): Promise<LeadRow[]> {
-  const { data, error } = await getClient()
-    .from('leads')
-    .select('*')
-    .eq('status', status)
-    .order('created_at', { ascending: true })
-    .limit(limit);
-  if (error) throw new Error(`getLeadsByStatus: ${error.message}`);
-  return (data ?? []) as LeadRow[];
+  return withRetry(async () => {
+    const { data, error } = await getClient()
+      .from('leads')
+      .select('*')
+      .eq('status', status)
+      .order('created_at', { ascending: true })
+      .limit(limit);
+    if (error) throw new Error(`getLeadsByStatus: ${error.message}`);
+    return (data ?? []) as LeadRow[];
+  });
 }
 
 export async function updateLead(id: string, patch: Partial<LeadRow>): Promise<void> {
@@ -106,11 +126,13 @@ export async function getFirstSentAt(): Promise<Date | null> {
   return data?.[0]?.sent_at ? new Date(data[0].sent_at) : null;
 }
 
-export async function getActiveVariants(): Promise<Array<{ id: string; name: string; prompt_snippet: string; weight: number }>> {
-  const { data, error } = await getClient()
-    .from('variants').select('id,name,prompt_snippet,weight').eq('active', true);
-  if (error) throw new Error(`getActiveVariants: ${error.message}`);
-  return data ?? [];
+export async function getActiveVariants(retries = 3, baseMs = 500): Promise<Array<{ id: string; name: string; prompt_snippet: string; weight: number }>> {
+  return withRetry(async () => {
+    const { data, error } = await getClient()
+      .from('variants').select('id,name,prompt_snippet,weight').eq('active', true);
+    if (error) throw new Error(`getActiveVariants: ${error.message}`);
+    return data ?? [];
+  }, retries, baseMs);
 }
 
 export async function getEmailByThread(thread_id: string) {
@@ -181,9 +203,11 @@ export async function recordQueryUsed(query: string, tier: number, placesFound: 
 }
 
 export async function getScraperState(): Promise<{ current_tier: number; last_burst_at: string | null }> {
-  const { data, error } = await getClient().from('scraper_state').select('*').eq('id', 1).single();
-  if (error) throw new Error(`getScraperState: ${error.message}`);
-  return data;
+  return withRetry(async () => {
+    const { data, error } = await getClient().from('scraper_state').select('*').eq('id', 1).single();
+    if (error) throw new Error(`getScraperState: ${error.message}`);
+    return data;
+  });
 }
 
 export async function setScraperTier(tier: number): Promise<void> {
@@ -197,10 +221,12 @@ export async function markBurstDone(): Promise<void> {
 }
 
 export async function countReadyToSend(): Promise<number> {
-  const { count, error } = await getClient()
-    .from('leads')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'READY_TO_SEND');
-  if (error) throw new Error(`countReadyToSend: ${error.message}`);
-  return count ?? 0;
+  return withRetry(async () => {
+    const { count, error } = await getClient()
+      .from('leads')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'READY_TO_SEND');
+    if (error) throw new Error(`countReadyToSend: ${error.message}`);
+    return count ?? 0;
+  });
 }

@@ -104,7 +104,7 @@ describe('runScraper', () => {
     mockGetByStatus
       .mockResolvedValueOnce([{
         id: 'lead-pre', business_name: 'Taller P', website: null,
-        email: null, rating: 3.5, review_count: 50, city: 'Bilbao',
+        email: null, rating: 3.0, review_count: 50, city: 'Bilbao',
       }])
       .mockResolvedValueOnce([]);
 

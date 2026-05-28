@@ -12,11 +12,19 @@ describe('qualifyLead — gates de reputación / contacto', () => {
   });
 
   it('rejects low rating', () => {
-    expect(qualifyLead({ ...base, rating: 3.5 }).qualified).toBe(false);
+    expect(qualifyLead({ ...base, rating: 3.0 }).qualified).toBe(false);
+  });
+
+  it('accepts rating at the 3.5 threshold', () => {
+    expect(qualifyLead({ ...base, rating: 3.5 }).qualified).toBe(true);
   });
 
   it('rejects too few reviews', () => {
-    expect(qualifyLead({ ...base, review_count: 10 }).qualified).toBe(false);
+    expect(qualifyLead({ ...base, review_count: 4 }).qualified).toBe(false);
+  });
+
+  it('accepts reviews at the 5 threshold', () => {
+    expect(qualifyLead({ ...base, review_count: 5 }).qualified).toBe(true);
   });
 
   it('rejects missing email', () => {
@@ -64,13 +72,13 @@ describe('qualifyLeadPreEnrich — gate antes de gastar Firecrawl', () => {
   });
 
   it('rejects low rating without calling Firecrawl', () => {
-    const r = qualifyLeadPreEnrich({ ...baseNoMail, rating: 3.5 });
+    const r = qualifyLeadPreEnrich({ ...baseNoMail, rating: 3.0 });
     expect(r.qualified).toBe(false);
     expect(r.reason).toBe('low_rating');
   });
 
   it('rejects too few reviews without calling Firecrawl', () => {
-    const r = qualifyLeadPreEnrich({ ...baseNoMail, review_count: 10 });
+    const r = qualifyLeadPreEnrich({ ...baseNoMail, review_count: 4 });
     expect(r.qualified).toBe(false);
     expect(r.reason).toBe('few_reviews');
   });

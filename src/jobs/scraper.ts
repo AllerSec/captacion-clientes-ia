@@ -10,13 +10,23 @@ import { notifyError } from '../core/health-monitor.js';
 import { pickNextQuery, burstQueries } from '../core/query-rotator.js';
 import { QUERIES_BY_TIER, TIER_NAMES } from '../config/queries.js';
 
-const READY_TO_SEND_THRESHOLD = 30;
+// Buffer de cola: el scraper rellena cada mañana hasta dejar ~este nº de leads
+// READY_TO_SEND. Con un objetivo de ~30 envíos/día, 60 da ~2 días de colchón.
+const READY_TO_SEND_THRESHOLD = 60;
+// Cap de queries por tick. Solo ~3% de lo scrapeado acaba contactable (el resto
+// tiene web, sin email, o no se le encuentra email al enriquecer), así que para
+// producir ~30 contactables/día hacen falta ~30+ queries. Dimensionado para
+// exprimir el crédito de Apify alimentando el objetivo de envío sin pasarse.
+const MAX_QUERIES_PER_TICK = 35;
 
 export async function runScraperAuto(): Promise<void> {
   const log = logger.child({ job: 'scraper' });
   try {
     const state = await getScraperState();
-    const recentlyUsed = await getRecentlyUsedQueries(30);
+    // Ventana de reciclaje de 10 días: con 343 queries únicas, da ~34 queries/día
+    // disponibles de forma sostenida (vs ~11/día con 30 días). Re-scrapear una zona
+    // cada 10 días capta negocios nuevos sin web; el place_id unique evita re-enviar.
+    const recentlyUsed = await getRecentlyUsedQueries(10);
     const queriesToRun: Array<{ q: string; tier: number }> = [];
 
     if (!state.last_burst_at) {
@@ -31,19 +41,28 @@ export async function runScraperAuto(): Promise<void> {
         await analyzeAndFilter();
         return;
       }
-      // NORMAL: pick next single query
-      const pick = pickNextQuery({ recentlyUsed, currentTier: state.current_tier });
-      if (pick.exhausted) {
+      // NORMAL: pick several queries this tick. One query yields only ~2-3
+      // qualified leads, so a single query/day can never fill the queue.
+      // Keep picking until we'd plausibly have enough or we hit the per-tick cap.
+      let currentTier = state.current_tier;
+      let exhausted = false;
+      while (queriesToRun.length < MAX_QUERIES_PER_TICK) {
+        const pick = pickNextQuery({ recentlyUsed, currentTier });
+        if (pick.exhausted) { exhausted = true; break; }
+        if (pick.jumpedTier && pick.tier !== currentTier) {
+          await setScraperTier(pick.tier);
+          await notifyError('warn', `Scraper salta a Tier ${pick.tier}`, `Hemos terminado el tier anterior. Ahora vamos a por: ${TIER_NAMES[pick.tier] ?? 'tier ' + pick.tier}.`);
+        }
+        currentTier = pick.tier;
+        queriesToRun.push({ q: pick.query!, tier: pick.tier });
+        recentlyUsed.add(pick.query!); // avoid re-picking the same query this tick
+      }
+      if (exhausted && queriesToRun.length === 0) {
         log.warn('all tiers exhausted, no new queries');
         await notifyError('warn', 'Scraper sin queries', 'Has agotado los 8 tiers. Espera 30 días para reciclar Tier 1, o añade queries nuevas a config/queries.ts.');
         await analyzeAndFilter();
         return;
       }
-      if (pick.jumpedTier && pick.tier !== state.current_tier) {
-        await setScraperTier(pick.tier);
-        await notifyError('warn', `Scraper salta a Tier ${pick.tier}`, `Hemos terminado el tier anterior. Ahora vamos a por: ${TIER_NAMES[pick.tier] ?? 'tier ' + pick.tier}.`);
-      }
-      queriesToRun.push({ q: pick.query!, tier: pick.tier });
     }
 
     for (const { q, tier } of queriesToRun) {
