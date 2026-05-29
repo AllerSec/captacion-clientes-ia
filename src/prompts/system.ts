@@ -2,7 +2,7 @@
  * Genera el system prompt para el email frío según el sector del lead.
  * Formato Renting Web: dolencia personalizada con competidor concreto,
  * oferta con bullets de Renting Web (0€ + 149€/mes + garantía 30 días),
- * CTA llamada.
+ * CTA: llamada o mensaje.
  */
 export function buildSystemPrompt(params: {
   sector: string;       // 'taller' | 'optica' | 'farmacia' | 'industria' | 'unknown'
@@ -67,7 +67,7 @@ ${exampleUrl ? `<p style="margin:0 0 8px 0">Hace poco trabajé con ${isFem ? 'un
 <p style="margin:0 0 4px 0"><b>0€ de pago inicial:</b> No desembolsáis nada por el diseño, el desarrollo ni la optimización de vuestra ficha de Google.</p>
 <p style="margin:0 0 4px 0"><b>Cuota fija de 149€/mes (como el gestor):</b> Incluye la web completa (hasta 5 secciones), hosting, posicionamiento continuo para adelantar a la competencia, sistema para conseguir reseñas de 5 estrellas y soporte directo conmigo por WhatsApp para cualquier cambio de tarifas o fotos.</p>
 <p style="margin:0 0 8px 0"><b>Garantía de 30 días:</b> Si el primer mes no os convence el resultado, os devuelvo el dinero. Sin preguntas.</p>
-<p style="margin:0 0 8px 0">Si os interesa dejar de regalarle ${queRegalan} a la competencia y queréis que os explique en 5 minutos por teléfono cómo lo haríamos con ${isFem ? 'vuestra' : 'vuestro'} ${sectorLabel}, decidme qué día os viene bien que os llame.</p>
+<p style="margin:0 0 8px 0">Si os interesa dejar de regalarle ${queRegalan} a la competencia y queréis que os explique en 5 minutos cómo lo haríamos con ${isFem ? 'vuestra' : 'vuestro'} ${sectorLabel}, decidme qué día os viene bien y lo hablamos por llamada o por mensaje, sin problema.</p>
 <p style="margin:0 0 8px 0">Un saludo,<br>Unax Aller<br><a href="https://unaxaller.com">unaxaller.com</a> · Irún</p>
 
 REGLAS DE SUSTITUCIÓN:
