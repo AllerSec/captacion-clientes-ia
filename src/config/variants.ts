@@ -40,7 +40,10 @@ Ejemplos según caso:
 - Problemas técnicos: "¿Sabéis cómo se ve vuestra web hoy desde un móvil nuevo?"
 La pregunta va SOLA, en su propio <p>, antes de la observación. La observación viene después como respuesta implícita.
 Sin signos de exclamación. Sin "¿verdad?" ni coletillas.`,
-    active: true,
+    // DESACTIVADA: la apertura con pregunta antes del saludo choca con la regla del template
+    // ("el body EMPIEZA con el saludo, nada antes") y la frase "¿Cuánta gente os busca" está en
+    // FORBIDDEN_PHRASES. Fallaba la validación ~siempre y desperdiciaba leads.
+    active: false,
     weight: 1,
   },
   {
@@ -55,7 +58,9 @@ Ejemplos según categoría:
 - Otros: "He montado web a otro negocio similar de la zona hace poco."
 NUNCA inventes nombres concretos de clientes. NUNCA pongas cifras inventadas ("subí ventas un X%").
 La frase va sola, sin "y" ni "además". Tono: comentario al margen, no presunción.`,
-    active: true,
+    // DESACTIVADA: la frase "He montado web a otr..." está en FORBIDDEN_PHRASES del validador
+    // (suena inventada). Fallaba la validación ~siempre y desperdiciaba leads.
+    active: false,
     weight: 1,
   },
 ] as const;
