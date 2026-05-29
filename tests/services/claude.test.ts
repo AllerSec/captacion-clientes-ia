@@ -10,12 +10,22 @@ vi.mock('../../src/config/env.js', () => ({
   loadEnv: () => ({ ANTHROPIC_API_KEY: 'k', ANTHROPIC_MODEL: 'claude-sonnet-4-6' }),
 }));
 
+// Helper: tool_use input con los 5 cuerpos que ahora exige el schema.
+const seqInput = (subject = 'hola') => ({
+  subject,
+  email1_body: '<p>inicial</p>',
+  email2_body: '<p>fu1</p>',
+  email3_body: '<p>fu2</p>',
+  email4_body: '<p>fu3</p>',
+  email5_body: '<p>despedida</p>',
+});
+
 describe('claude service', () => {
   beforeEach(() => mockCreate.mockReset());
 
-  it('generateEmail returns parsed tool_use output', async () => {
+  it('generateEmail returns the 5 bodies from tool_use output', async () => {
     mockCreate.mockResolvedValue({
-      content: [{ type: 'tool_use', name: 'send_email_draft', input: { subject: 'hola', body: '<p>hola</p>' } }],
+      content: [{ type: 'tool_use', name: 'send_email_draft', input: seqInput('hola') }],
     });
     const { generateEmail } = await import('../../src/services/claude.js');
     const out = await generateEmail({
@@ -24,7 +34,18 @@ describe('claude service', () => {
       userPrompt: 'biz info',
     });
     expect(out.subject).toBe('hola');
-    expect(out.body).toContain('<p>');
+    expect(out.bodies).toHaveLength(5);
+    expect(out.bodies[0]).toContain('inicial');
+    expect(out.bodies[4]).toContain('despedida');
+  });
+
+  it('generateEmail throws when a body field is missing', async () => {
+    mockCreate.mockResolvedValue({
+      content: [{ type: 'tool_use', name: 'send_email_draft', input: { subject: 's', email1_body: '<p>x</p>' } }],
+    });
+    const { generateEmail } = await import('../../src/services/claude.js');
+    await expect(generateEmail({ systemPrompt: 'sys', variantSnippet: '', userPrompt: 'p' }))
+      .rejects.toThrow(/email2_body/);
   });
 
   it('classifyReplyText returns valid kind', async () => {
@@ -39,7 +60,7 @@ describe('claude service', () => {
     mockCreate
       .mockRejectedValueOnce(overload)
       .mockResolvedValueOnce({
-        content: [{ type: 'tool_use', name: 'send_email_draft', input: { subject: 's', body: '<p>b</p>' } }],
+        content: [{ type: 'tool_use', name: 'send_email_draft', input: seqInput('s') }],
       });
 
     const { generateEmail } = await import('../../src/services/claude.js');

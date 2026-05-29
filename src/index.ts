@@ -8,6 +8,7 @@ import { runWatcher } from './jobs/watcher.js';
 import { notifyError } from './core/health-monitor.js';
 import { runDailySummary } from './jobs/daily-summary.js';
 import { ensureVariantsSeeded } from './config/variants.js';
+import { ensureCampaignSequence } from './services/instantly.js';
 
 const env = loadEnv();
 const log = logger.child({ component: 'main' });
@@ -16,6 +17,14 @@ const log = logger.child({ component: 'main' });
 ensureVariantsSeeded().catch(err => {
   log.error({ err: err instanceof Error ? err.message : String(err) }, 'variant seed failed at boot');
   notifyError('warn', 'Variant seed failed at boot', err instanceof Error ? (err.stack ?? err.message) : String(err))
+    .catch(() => { /* health-monitor itself broken, swallow */ });
+});
+
+// Idempotent: ensures the Instantly campaign has the 5-step follow-up sequence.
+// Safe to fail (leads still queue; follow-ups just won't fire until fixed).
+ensureCampaignSequence().catch(err => {
+  log.error({ err: err instanceof Error ? err.message : String(err) }, 'campaign sequence setup failed at boot');
+  notifyError('warn', 'Campaign sequence setup failed at boot', err instanceof Error ? (err.stack ?? err.message) : String(err))
     .catch(() => { /* health-monitor itself broken, swallow */ });
 });
 

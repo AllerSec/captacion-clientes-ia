@@ -5,9 +5,13 @@ const API_BASE = 'https://api.instantly.ai/api/v2';
 export interface AddLeadParams {
   to: string;
   subject: string;
-  htmlBody: string;
+  /** [email inicial, follow-up 1..4]. 5 cuerpos HTML. */
+  bodies: string[];
   leadDbId: string;
 }
+
+// Días de espera antes de cada step de la secuencia (0 = el inicial sale ya).
+const SEQUENCE_DELAYS = [0, 3, 7, 14, 21];
 
 export interface AddLeadResult {
   instantlyLeadId: string;
@@ -45,17 +49,56 @@ function campaignId(): string {
   return env.INSTANTLY_CAMPAIGN_ID;
 }
 
+// Deja la campaña con la secuencia de 5 steps (inicial + 4 follow-ups). Cada step usa la
+// variable {{emailN_body}} que rellenamos por lead en addLeadToCampaign. El asunto del
+// inicial usa {{subject}}; los follow-ups van con asunto vacío para seguir el mismo hilo.
+// Idempotente: se llama al boot (PATCH sobreescribe la secuencia con la misma estructura).
+//
+// stop_on_reply: true es CRÍTICO. Vía API este campo es false por defecto, así que hay que
+// forzarlo aquí: si un lead responde, Instantly para de mandarle los follow-ups. Sin esto,
+// una empresa que ya ha contestado seguiría recibiendo los 4 seguimientos (parecería un robot
+// que no lee las respuestas).
+export async function ensureCampaignSequence(): Promise<void> {
+  const steps = SEQUENCE_DELAYS.map((delay, i) => ({
+    type: 'email',
+    delay,
+    variants: [{
+      subject: i === 0 ? '{{subject}}' : '',
+      body: `{{email${i + 1}_body}}`,
+    }],
+  }));
+
+  const res = await fetch(`${API_BASE}/campaigns/${campaignId()}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      sequences: [{ steps }],
+      stop_on_reply: true,
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Instantly ensureCampaignSequence ${res.status}: ${body}`);
+  }
+}
+
 export async function addLeadToCampaign(params: AddLeadParams): Promise<AddLeadResult> {
+  // Cada step de la campaña usa {{emailN_body}}; pasamos los 5 cuerpos como custom vars.
+  const bodyVars: Record<string, string> = {};
+  params.bodies.forEach((b, i) => { bodyVars[`email${i + 1}_body`] = b; });
+
   const res = await fetch(`${API_BASE}/leads`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({
       campaign: campaignId(),
       email: params.to,
-      personalization: params.htmlBody,
+      personalization: params.bodies[0],
       custom_variables: {
         subject: params.subject,
         lead_db_id: params.leadDbId,
+        ...bodyVars,
       },
       skip_if_in_workspace: true,
     }),

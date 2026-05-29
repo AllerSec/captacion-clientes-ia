@@ -111,3 +111,64 @@ export function validateGeneratedEmail(input: ValidateInput): ValidateResult {
 
   return errors.length === 0 ? { ok: true } : { ok: false, errors };
 }
+
+export interface ValidateSequenceInput {
+  subject: string;
+  bodies: string[];   // [email inicial, follow-up 1..4]
+  scenario: 'no_web' | 'old_website';
+  requiredExampleUrl?: string | null;
+  requiredCompetitorName?: string | null;
+}
+
+// Frases de "recordatorio vacío" que matan la respuesta en follow-ups.
+const FORBIDDEN_FOLLOWUP_PHRASES = [
+  /¿?\s*vist[ei]+s mi (correo|email|mensaje)/i,
+  /haciendo seguimiento/i,
+  /¿?\s*recib[ií]st[ei]+s mi/i,
+  /por si (no )?lo (visteis|leísteis|recibisteis)/i,
+];
+
+// Tope de palabras por follow-up (texto plano). El prompt pide <70; damos margen a 90.
+const FOLLOWUP_MAX_WORDS = 90;
+
+function stripTags(html: string): string {
+  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// Valida la secuencia completa: body[0] con las reglas estrictas del email inicial,
+// y los follow-ups (body[1..]) con reglas laxas (firma + sin frases prohibidas + brevedad).
+export function validateSequence(input: ValidateSequenceInput): ValidateResult {
+  const errors: string[] = [];
+
+  if (input.bodies.length !== 5) {
+    errors.push(`secuencia: se esperaban 5 cuerpos, llegaron ${input.bodies.length}`);
+    return { ok: false, errors };
+  }
+
+  const initial = validateGeneratedEmail({
+    subject: input.subject,
+    body: input.bodies[0],
+    scenario: input.scenario,
+    details: [],
+    requiredExampleUrl: input.requiredExampleUrl,
+    requiredCompetitorName: input.requiredCompetitorName,
+  });
+  if (!initial.ok) errors.push(...initial.errors.map(e => `email1: ${e}`));
+
+  for (let i = 1; i < input.bodies.length; i++) {
+    const body = input.bodies[i];
+    const label = `email${i + 1}`;
+    if (!SIGNATURE_RX.test(body)) errors.push(`${label}: firma unaxaller.com no encontrada`);
+    if (bodyMentionsHttpsAsWord(body)) errors.push(`${label}: contiene "HTTPS" como palabra suelta`);
+    for (const rx of FORBIDDEN_TECH) {
+      if (rx.test(body)) errors.push(`${label}: afirmación técnica prohibida (${rx.source})`);
+    }
+    for (const rx of FORBIDDEN_FOLLOWUP_PHRASES) {
+      if (rx.test(body)) errors.push(`${label}: frase de recordatorio vacío prohibida (${rx.source})`);
+    }
+    const words = stripTags(body).split(' ').filter(w => w.length > 0).length;
+    if (words > FOLLOWUP_MAX_WORDS) errors.push(`${label}: demasiado largo (${words} palabras, máx ${FOLLOWUP_MAX_WORDS})`);
+  }
+
+  return errors.length === 0 ? { ok: true } : { ok: false, errors };
+}

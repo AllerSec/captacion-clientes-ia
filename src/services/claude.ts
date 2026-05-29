@@ -26,7 +26,8 @@ export interface GenerateEmailInput {
 
 export interface GenerateEmailOutput {
   subject: string;
-  body: string;
+  /** [email inicial, follow-up 1..4]. 5 cuerpos en total. */
+  bodies: string[];
 }
 
 export async function generateEmail(input: GenerateEmailInput): Promise<GenerateEmailOutput> {
@@ -34,7 +35,7 @@ export async function generateEmail(input: GenerateEmailInput): Promise<Generate
   const resp = await withRetry(
     () => getClient().messages.create({
       model: env.ANTHROPIC_MODEL,
-      max_tokens: 1200,
+      max_tokens: 2400,
       system: [
         {
           type: 'text',
@@ -45,14 +46,18 @@ export async function generateEmail(input: GenerateEmailInput): Promise<Generate
       tools: [
         {
           name: 'send_email_draft',
-          description: 'Devuelve el email generado en formato estructurado.',
+          description: 'Devuelve la secuencia de 5 emails (1 inicial + 4 follow-ups) en formato estructurado.',
           input_schema: {
             type: 'object',
             properties: {
-              subject: { type: 'string', description: 'Asunto del email' },
-              body: { type: 'string', description: 'Cuerpo del email en HTML (solo <p> y <b>)' },
+              subject: { type: 'string', description: 'Asunto del email inicial' },
+              email1_body: { type: 'string', description: 'Cuerpo del EMAIL INICIAL en HTML (solo <p>, <b>, <a>)' },
+              email2_body: { type: 'string', description: 'Follow-up 1 en HTML. Ángulo: coste de no aparecer en Google.' },
+              email3_body: { type: 'string', description: 'Follow-up 2 en HTML. Ángulo: prueba social (caso de éxito).' },
+              email4_body: { type: 'string', description: 'Follow-up 3 en HTML. Ángulo: quitar el riesgo (0€ + garantía).' },
+              email5_body: { type: 'string', description: 'Follow-up 4 (despedida) en HTML. Ángulo: breakup, puerta abierta.' },
             },
-            required: ['subject', 'body'],
+            required: ['subject', 'email1_body', 'email2_body', 'email3_body', 'email4_body', 'email5_body'],
           },
         },
       ],
@@ -66,11 +71,21 @@ export async function generateEmail(input: GenerateEmailInput): Promise<Generate
   if (!toolUse || toolUse.type !== 'tool_use') {
     throw new Error('Claude did not use the send_email_draft tool');
   }
-  const parsed = toolUse.input as { subject?: unknown; body?: unknown };
-  if (typeof parsed.subject !== 'string' || typeof parsed.body !== 'string') {
-    throw new Error('Claude tool output missing subject/body');
+  const p = toolUse.input as Record<string, unknown>;
+  const keys = ['subject', 'email1_body', 'email2_body', 'email3_body', 'email4_body', 'email5_body'];
+  for (const k of keys) {
+    if (typeof p[k] !== 'string') throw new Error(`Claude tool output missing ${k}`);
   }
-  return { subject: parsed.subject, body: parsed.body };
+  return {
+    subject: p.subject as string,
+    bodies: [
+      p.email1_body as string,
+      p.email2_body as string,
+      p.email3_body as string,
+      p.email4_body as string,
+      p.email5_body as string,
+    ],
+  };
 }
 
 export interface VisualJudgment {

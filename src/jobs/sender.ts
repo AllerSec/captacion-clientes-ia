@@ -10,7 +10,7 @@ import { detectSector } from '../core/sector-detector.js';
 import { loadEnv } from '../config/env.js';
 import { logger } from '../lib/logger.js';
 import { notifyError } from '../core/health-monitor.js';
-import { validateGeneratedEmail } from '../core/email-validator.js';
+import { validateSequence } from '../core/email-validator.js';
 
 export interface RunSenderOpts {
   now?: Date;
@@ -75,37 +75,37 @@ export async function runSender(opts: RunSenderOpts = {}): Promise<void> {
 
     const topComps = ((lead as any).top_competitors ?? []) as Array<{ name: string; website: string }>;
     const requiredCompetitorName = topComps.length > 0 ? topComps[0].name : null;
-    let v = validateGeneratedEmail({
+    let v = validateSequence({
       subject: generated.subject,
-      body: generated.body,
+      bodies: generated.bodies,
       scenario: 'no_web',
-      details: [],
       requiredExampleUrl: sectorInfo.exampleUrl,
       requiredCompetitorName,
     });
     if (!v.ok) {
-      log.warn({ leadId: lead.id, errors: v.errors }, 'email validation failed, retrying once');
-      const retryPrompt = `${userPrompt}\n\nIMPORTANTE: tu intento anterior tuvo estos errores: ${v.errors.join(' | ')}. Corrígelos y vuelve a llamar a la tool send_email_draft.`;
+      log.warn({ leadId: lead.id, errors: v.errors }, 'sequence validation failed, retrying once');
+      const retryPrompt = `${userPrompt}\n\nIMPORTANTE: tu intento anterior tuvo estos errores: ${v.errors.join(' | ')}. Corrígelos y vuelve a llamar a la tool send_email_draft con los 5 cuerpos.`;
       generated = await generateEmail({
         systemPrompt,
         variantSnippet: variant.prompt_snippet,
         userPrompt: retryPrompt,
       });
-      v = validateGeneratedEmail({
+      v = validateSequence({
         subject: generated.subject,
-        body: generated.body,
+        bodies: generated.bodies,
         scenario: 'no_web',
-        details: [],
+        requiredExampleUrl: sectorInfo.exampleUrl,
+        requiredCompetitorName,
       });
       if (!v.ok) {
-        log.error({ leadId: lead.id, errors: v.errors }, 'email validation failed after retry, skipping');
+        log.error({ leadId: lead.id, errors: v.errors }, 'sequence validation failed after retry, skipping');
         await updateLead(lead.id, { status: 'SKIPPED', notes: 'invalid_generation:' + v.errors.join('|') });
         return;
       }
     }
 
     if (env.DRY_RUN) {
-      log.info({ leadId: lead.id, subject: generated.subject, body: generated.body }, '[DRY_RUN] would queue');
+      log.info({ leadId: lead.id, subject: generated.subject, bodies: generated.bodies }, '[DRY_RUN] would queue');
       await updateLead(lead.id, { status: 'SKIPPED', notes: 'dry_run_preview' });
       return;
     }
@@ -113,7 +113,7 @@ export async function runSender(opts: RunSenderOpts = {}): Promise<void> {
     const result = await addLeadToCampaign({
       to: lead.email,
       subject: generated.subject,
-      htmlBody: generated.body,
+      bodies: generated.bodies,
       leadDbId: lead.id,
     });
 
@@ -129,7 +129,7 @@ export async function runSender(opts: RunSenderOpts = {}): Promise<void> {
     await recordEmailSent({
       lead_id: lead.id,
       subject: generated.subject,
-      body: generated.body,
+      body: generated.bodies[0],
       variant_id: variant.id,
       gmail_message_id: result.instantlyLeadId,
       gmail_thread_id: '',

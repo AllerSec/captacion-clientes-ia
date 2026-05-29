@@ -66,15 +66,16 @@ async function main() {
     userPrompt,
   });
 
+  const initialBody = generated.bodies[0];
   console.log(`\n[TEST] Asunto: ${generated.subject}`);
-  console.log(`[TEST] Body HTML (${generated.body.length} chars):\n${generated.body}\n`);
+  console.log(`[TEST] Body HTML del email inicial (${initialBody.length} chars):\n${initialBody}\n`);
 
   console.log(`[TEST] Enviando a ${dest}...`);
   const out = await sendEmail({
     to: dest,
     subject: `[TEST] ${generated.subject}`,
-    htmlBody: generated.body,
-    textBody: htmlToText(generated.body),
+    htmlBody: initialBody,
+    textBody: htmlToText(initialBody),
   });
 
   console.log(`\n[TEST] ✅ Enviado.`);

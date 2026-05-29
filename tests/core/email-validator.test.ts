@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateGeneratedEmail } from '../../src/core/email-validator.js';
+import { validateGeneratedEmail, validateSequence } from '../../src/core/email-validator.js';
 
 const sig = `<p style="margin:0 0 8px 0">Un saludo,<br>Unax Aller<br><a href="https://unaxaller.com">unaxaller.com</a> · Irún</p>`;
 const cta = `<p style="margin:0 0 8px 0">Si os interesa y queréis que os explique, decidme qué día os va bien que os llame.</p>`;
@@ -120,5 +120,47 @@ describe('validateGeneratedEmail', () => {
       requiredCompetitorName: 'Taller Juanjo',
     });
     expect(r.ok).toBe(true);
+  });
+});
+
+describe('validateSequence', () => {
+  const fu = (n: number) => `<p style="margin:0 0 8px 0">Hola:</p><p style="margin:0 0 8px 0">Apunte ${n}: sin web os ven menos. Se arregla sin pagar nada. ¿Lo vemos?</p><p style="margin:0 0 8px 0">Unax · <a href="https://unaxaller.com">unaxaller.com</a></p>`;
+  const goodBodies = () => [wholeBody(), fu(1), fu(2), fu(3), fu(4)];
+
+  it('passes a clean 5-email sequence', () => {
+    const r = validateSequence({ subject: validSubject, bodies: goodBodies(), scenario: 'no_web' });
+    expect(r.ok).toBe(true);
+  });
+
+  it('fails if there are not exactly 5 bodies', () => {
+    const r = validateSequence({ subject: validSubject, bodies: [wholeBody()], scenario: 'no_web' });
+    expect(r.ok).toBe(false);
+  });
+
+  it('fails when a follow-up is missing the signature', () => {
+    const bodies = goodBodies();
+    bodies[2] = `<p style="margin:0 0 8px 0">Hola:</p><p>Sin firma aquí.</p>`;
+    const r = validateSequence({ subject: validSubject, bodies, scenario: 'no_web' });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.errors.join(' ')).toMatch(/email3.*firma/i);
+  });
+
+  it('fails when a follow-up uses an empty-reminder phrase', () => {
+    const bodies = goodBodies();
+    bodies[1] = `<p style="margin:0 0 8px 0">Hola:</p><p>¿Visteis mi correo de la semana pasada?</p><p>Unax · <a href="https://unaxaller.com">unaxaller.com</a></p>`;
+    const r = validateSequence({ subject: validSubject, bodies, scenario: 'no_web' });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.errors.join(' ')).toMatch(/email2.*recordatorio/i);
+  });
+
+  it('propagates strict errors from the initial email (body[0])', () => {
+    const bodies = goodBodies();
+    bodies[0] = bodies[0].replace('<b>0€ de pago inicial:</b>', '0€ de pago inicial:');
+    const r = validateSequence({ subject: validSubject, bodies, scenario: 'no_web' });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.errors.join(' ')).toMatch(/email1/i);
   });
 });

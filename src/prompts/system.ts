@@ -59,7 +59,7 @@ Presencia en Google para {{NOMBRE_NEGOCIO}}: Cómo superar a {{COMPETIDOR_PRINCI
 Si no hay COMPETIDOR_PRINCIPAL, usa este subject de fallback:
 Presencia en Google para {{NOMBRE_NEGOCIO}}: Cómo aparecer antes que la competencia sin pagar miles de euros de golpe
 
-BODY (HTML):
+EMAIL 1 — INICIAL (campo email1_body). Cópialo literal, solo sustituye placeholders:
 <p style="margin:0 0 8px 0">Hola, equipo de {{NOMBRE_NEGOCIO}}:</p>
 <p style="margin:0 0 8px 0">Soy Unax, desarrollador web en Irún. Os escribo porque buscando ${sectorPlural} en {{CIUDAD}} a través de Google Maps, he visto que <b>{{COMPETIDOR_PRINCIPAL}}</b> aparece en los primeros resultados y se está llevando ${queRegalan} de la zona que os corresponden, simplemente por tener una web optimizada. Vosotros no aparecéis ahí porque no tenéis página web.</p>
 ${exampleUrl ? `<p style="margin:0 0 8px 0">Hace poco trabajé con ${isFem ? 'una' : 'un'} ${sectorLabel} (<a href="https://${exampleUrl}">${exampleUrl}</a>) solucionando esto mismo. Desde que lanzamos su sistema, les entra un flujo constante de ${queRegalan} que antes elegían a otr${articleFem === 'a' ? 'as' : 'os'} ${sectorPlural} de la zona solo porque los encontraban antes en Google.</p>` : ''}
@@ -85,13 +85,43 @@ ENLACES:
 - ${exampleUrl ? `Ejemplo \`${exampleUrl}\` envuelto en \`<a href="https://${exampleUrl}">${exampleUrl}</a>\`.` : ''}
 - Firma \`unaxaller.com\` envuelta en \`<a href="https://unaxaller.com">unaxaller.com</a>\`.
 
-PROHIBIDO:
+PROHIBIDO (aplica al EMAIL 1):
 - Mencionar HTTPS, "no responsive", "web lenta" o tecnicismos similares.
 - Inventar competidores. Si no llega COMPETIDOR_PRINCIPAL, usas el fallback.
 - Añadir bullets extra, garantías extra o promesas que no estén en el template.
 - Cambiar el orden de los párrafos.
 
-Llama a la tool send_email_draft con los campos subject y body. Body en HTML usando solo <p style="...">, <b>, <br> y <a href="...">.`;
+==========================================================
+FOLLOW-UPS (campos email2_body … email5_body)
+==========================================================
+Son 4 correos de seguimiento que se envían en días distintos a quien NO responde al
+email 1. Van en el MISMO hilo (sin asunto). Reglas para TODOS los follow-ups:
+- MUY cortos: máximo 70 palabras cada uno. Frases simples, lenguaje llano.
+- Tuteo plural ("os", "vuestra"), tono cercano, cero emojis, cero guiones largos.
+- NADA de "¿visteis mi correo?", "os escribo de nuevo por si...", "haciendo seguimiento":
+  esas frases de "recordatorio vacío" matan la respuesta. Cada correo APORTA algo nuevo.
+- Cada uno termina firmando: \`<p style="margin:0 0 8px 0">Unax · <a href="https://unaxaller.com">unaxaller.com</a></p>\`
+- HTML simple: solo <p style="margin:0 0 8px 0">, <b> y <a href="...">.
+- Empiezan con un saludo corto tipo "<p style="margin:0 0 8px 0">Hola otra vez:</p>" o "Hola:".
+
+email2_body — ÁNGULO: el coste de no aparecer.
+Idea: cada semana sin salir en Google, esos ${queRegalan} no es que os digan que no, es que
+ni os ven; se van ${isFem ? 'a la primera' : 'al primero'} que sale. Eso se arregla y sin pagar
+nada por adelantado. Cierra con: ¿le echamos 5 minutos esta semana?
+
+email3_body — ÁNGULO: prueba social.${exampleUrl ? ` Cuenta breve cómo funcionó con ${isFem ? 'una' : 'un'} ${sectorLabel} de la zona (${exampleUrl}): desde que salen primeros en Google les entran ${queRegalan} nuevos que antes se iban a la competencia. NO copies literal el párrafo del email 1; dilo distinto y más corto.` : ` Cuenta breve que has hecho esto con otros negocios locales y desde que salen primeros en Google les entran ${queRegalan} nuevos. Sin nombrar URL.`} Cierra: ¿lo hablamos?
+
+email4_body — ÁNGULO: quitar el riesgo.
+Idea: dar el paso da respeto, así que lo pones fácil: 0€ por adelantado y 30 días de garantía;
+si el primer mes no convence, devuelves el dinero. O sea, probarlo no cuesta nada. Cierra: ¿lo vemos?
+
+email5_body — DESPEDIDA (breakup).
+Idea: este es el último correo, que no quieres ser pesado. Si ahora no es el momento, lo
+entiendes. Dejas la puerta abierta por si más adelante quieren dejar de regalarle ${queRegalan}
+a quien sí sale en Google. Cierra con buen rollo: "Un saludo y suerte con el negocio".
+
+Llama a la tool send_email_draft con subject, email1_body, email2_body, email3_body, email4_body
+y email5_body. Todo el HTML usando solo <p style="...">, <b>, <br> y <a href="...">.`;
 }
 
 // Mantener compatibilidad con imports existentes que usen SYSTEM_PROMPT directamente.
