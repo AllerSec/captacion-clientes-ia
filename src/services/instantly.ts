@@ -10,8 +10,15 @@ export interface AddLeadParams {
   leadDbId: string;
 }
 
-// Días de espera antes de cada step de la secuencia (0 = el inicial sale ya).
-const SEQUENCE_DELAYS = [0, 3, 7, 14, 21];
+// OJO: en Instantly, el `delay` de un step es los días a esperar HASTA EL SIGUIENTE step
+// (no antes del propio). Por eso el delay va en el step que precede a la espera, y el último
+// step lleva 0 (no hay siguiente). Estos valores producen la cadencia día 0/3/7/14/21:
+//   email1 delay 3  -> FU1 (día 3)
+//   FU1    delay 4  -> FU2 (día 7)
+//   FU2    delay 7  -> FU3 (día 14)
+//   FU3    delay 7  -> FU4 (día 21)
+//   FU4    delay 0  -> (último)
+const SEQUENCE_STEP_DELAYS = [3, 4, 7, 7, 0];
 
 export interface AddLeadResult {
   instantlyLeadId: string;
@@ -59,7 +66,7 @@ function campaignId(): string {
 // una empresa que ya ha contestado seguiría recibiendo los 4 seguimientos (parecería un robot
 // que no lee las respuestas).
 export async function ensureCampaignSequence(): Promise<void> {
-  const steps = SEQUENCE_DELAYS.map((delay, i) => ({
+  const steps = SEQUENCE_STEP_DELAYS.map((delay, i) => ({
     type: 'email',
     delay,
     variants: [{
