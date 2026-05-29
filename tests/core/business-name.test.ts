@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cleanBusinessName, isLikelyFranchise } from '../../src/core/business-name.js';
+import { cleanBusinessName, isLikelyFranchise, isValidCompetitor } from '../../src/core/business-name.js';
 
 describe('cleanBusinessName', () => {
   it('downcases ALL CAPS to Title Case', () => {
@@ -46,5 +46,36 @@ describe('isLikelyFranchise', () => {
     expect(isLikelyFranchise('Talleres Egia')).toBe(false);
     expect(isLikelyFranchise('Farmacia García')).toBe(false);
     expect(isLikelyFranchise('Óptica Goya')).toBe(false);
+  });
+});
+
+describe('isValidCompetitor', () => {
+  it('accepts a real private same-sector business', () => {
+    expect(isValidCompetitor({ name: 'Óptica Goya', website: 'https://opticagoya.com' })).toBe(true);
+    expect(isValidCompetitor({ name: 'Talleres Egia', website: 'http://talleresegia.es' })).toBe(true);
+  });
+
+  it('rejects public entities (the ambulatorio bug)', () => {
+    expect(isValidCompetitor({ name: 'Centro de Salud de Tafalla', website: 'http://www.tafalla.es/centro-de-salud' })).toBe(false);
+    expect(isValidCompetitor({ name: 'Ayuntamiento de Burlada', website: 'https://www.burlada.es' })).toBe(false);
+    expect(isValidCompetitor({ name: 'Hospital García Orcoyen', website: 'https://hospital.navarra.es' })).toBe(false);
+  });
+
+  it('rejects directories and aggregators by domain', () => {
+    expect(isValidCompetitor({ name: 'Óptica X', website: 'https://www.paginasamarillas.es/x' })).toBe(false);
+    expect(isValidCompetitor({ name: 'Clínica Y', website: 'https://www.doctoralia.es/y' })).toBe(false);
+  });
+
+  it('rejects social media profiles', () => {
+    expect(isValidCompetitor({ name: 'Taller Z', website: 'https://www.facebook.com/tallerz' })).toBe(false);
+  });
+
+  it('rejects franchises', () => {
+    expect(isValidCompetitor({ name: 'Multiópticas Centro', website: 'https://multiopticas.com' })).toBe(false);
+  });
+
+  it('rejects entries missing name or website', () => {
+    expect(isValidCompetitor({ name: '', website: 'https://x.com' })).toBe(false);
+    expect(isValidCompetitor({ name: 'X', website: '' })).toBe(false);
   });
 });

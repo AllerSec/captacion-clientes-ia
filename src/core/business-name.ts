@@ -70,3 +70,49 @@ export function isLikelyFranchise(businessName: string): boolean {
   if (!businessName) return false;
   return FRANCHISE_PATTERNS.some(rx => rx.test(businessName));
 }
+
+// Entidades que NUNCA son competencia de un negocio local privado: salen primero en
+// Google Maps por relevancia institucional, pero nombrarlas como "competidor que te
+// quita clientes" deja en evidencia que no se ha mirado qué son (ej: un ambulatorio
+// público frente a una óptica). Se filtran por NOMBRE.
+const NON_COMPETITOR_NAME_PATTERNS: RegExp[] = [
+  /\bayuntamiento\b/i,
+  /\bcentro\s+de\s+salud\b/i,
+  /\bambulatorio\b/i,
+  /\bhospital\b/i,
+  /\bcl[ií]nica\s+universitaria\b/i,
+  /\bseguridad\s+social\b/i,
+  /\bcolegio\b/i,
+  /\binstituto\b/i,
+  /\buniversidad\b/i,
+  /\bdiputaci[oó]n\b/i,
+  /\bgobierno\b/i,
+  /\bjunta\s+de\b/i,
+  /\bconcejal[ií]a\b/i,
+  /\bregistro\s+civil\b/i,
+  /\bpolic[ií]a\b/i,
+  /\bbomberos\b/i,
+  /\bcorreos\b/i,
+  /\bcámara\s+de\s+comercio\b/i,
+  /\basociaci[oó]n\s+de\s+comerciantes\b/i,
+];
+
+// Dominios que NO son la web de un negocio competidor real: directorios, agregadores,
+// redes sociales y webs oficiales. Si el "competidor" apunta aquí, no vale.
+const NON_COMPETITOR_DOMAIN_PATTERNS: RegExp[] = [
+  /paginasamarillas/i, /doctoralia/i, /yelp\./i, /tripadvisor/i, /foursquare/i,
+  /einforma/i, /axesor/i, /infoempresa/i, /infobel/i, /cylex/i, /11870/i,
+  /facebook\.com/i, /instagram\.com/i, /tiktok\.com/i, /linkedin\.com/i,
+  /twitter\.com/i, /x\.com/i, /youtube\.com/i, /google\.com/i,
+  /\.gob\.es/i, /\.gov\b/i, /\.sergas\./i, /\.osakidetza\./i, /\.navarra\.es/i,
+];
+
+// Decide si un resultado de Google Maps es un competidor legítimo para personalizar
+// el cold email. Descarta entidades públicas, directorios, redes sociales y franquicias.
+export function isValidCompetitor(c: { name: string; website: string }): boolean {
+  if (!c.name || !c.website) return false;
+  if (NON_COMPETITOR_NAME_PATTERNS.some(rx => rx.test(c.name))) return false;
+  if (NON_COMPETITOR_DOMAIN_PATTERNS.some(rx => rx.test(c.website))) return false;
+  if (isLikelyFranchise(c.name)) return false;
+  return true;
+}

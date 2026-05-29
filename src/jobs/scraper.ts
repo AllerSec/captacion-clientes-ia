@@ -4,6 +4,7 @@ import {
   getRecentlyUsedQueries, recordQueryUsed, getScraperState, setScraperTier, markBurstDone, countReadyToSend,
 } from '../services/supabase.js';
 import { qualifyLead, qualifyLeadPreEnrich } from '../core/lead-filter.js';
+import { isValidCompetitor } from '../core/business-name.js';
 import { enrichLead } from '../services/lead-enricher.js';
 import { logger } from '../lib/logger.js';
 import { notifyError } from '../core/health-monitor.js';
@@ -72,10 +73,14 @@ export async function runScraperAuto(): Promise<void> {
         // Top 3 competidores CON web de esta query, en el orden devuelto por Apify
         // (Apify devuelve por relevancia/ranking en Google). Sirven para personalizar
         // el cold email con un competidor real al que el lead "está regalando clientes".
+        // isValidCompetitor descarta entidades públicas (ambulatorios, ayuntamientos),
+        // directorios y franquicias: nombrarlas como competidor delataría que no se ha
+        // mirado el negocio. Si no queda ninguno válido, el email usa el fallback genérico.
         const topCompetitors = places
           .filter(p => p.website && p.website.trim().length > 0)
-          .slice(0, 3)
-          .map(p => ({ name: p.business_name, website: p.website as string }));
+          .map(p => ({ name: p.business_name, website: p.website as string }))
+          .filter(isValidCompetitor)
+          .slice(0, 3);
         let inserted = 0;
         for (const p of places) {
           try {
@@ -284,8 +289,9 @@ export async function runScraper(queries: string[]): Promise<void> {
       const places = await searchBusinesses(q, 50);
       const topCompetitors = places
         .filter(p => p.website && p.website.trim().length > 0)
-        .slice(0, 3)
-        .map(p => ({ name: p.business_name, website: p.website as string }));
+        .map(p => ({ name: p.business_name, website: p.website as string }))
+        .filter(isValidCompetitor)
+        .slice(0, 3);
       for (const p of places) {
         const competitorsForLead = topCompetitors
           .filter(c => c.website !== p.website && c.name !== p.business_name)
