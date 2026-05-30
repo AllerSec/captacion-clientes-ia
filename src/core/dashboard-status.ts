@@ -1,20 +1,28 @@
 /**
  * Lógica PURA del panel de estado. Recibe contadores/timestamps ya leídos y
- * decide los semáforos. Sin red, sin imports de services → testeable en frío.
+ * decide los semáforos + arma los bloques. Sin red, sin imports de services.
  */
 
 export type Light = 'green' | 'amber' | 'red';
 
 export interface DashboardInput {
-  now: number; // Date.now()
+  now: number;
   // Envíos
   sentToday: number;
-  queued: number; // QUEUED + READY_TO_SEND
+  queued: number;
   lastSentAt: number | null;
-  totalContacted: number;
+  lastEmailedBusiness: string | null;
+  nextLead: { business_name: string; city: string | null } | null;
+  // Gráfica 7 días
+  dailySent: Array<{ day: string; count: number }>;
+  // Embudo
+  funnel: { scraped: number; withEmail: number; queued: number; contacted: number; responded: number };
   // Créditos / fuentes
-  recentQuotaErrors: number; // leads con notes de quota en las últimas 24h
+  recentQuotaErrors: number;
   lastEnrichAt: number | null;
+  apify: { usedUsd: number; limitUsd: number; cycleEnd: string | null } | null;
+  // Instantly
+  instantly: { emailsSent: number; contacted: number; opens: number; replies: number; bounced: number } | null;
   // Sistema
   lastSenderRun: number | null;
   lastWatcherRun: number | null;
@@ -34,7 +42,11 @@ export interface DashboardStatus {
   global: Light;
   updatedAt: number;
   envios: Block;
-  creditos: Block;
+  proximo: Block;
+  grafica: Block & { bars: Array<{ day: string; count: number }> };
+  embudo: Block & { funnel: DashboardInput['funnel'] };
+  creditos: Block & { apifyPct: number | null };
+  instantly: Block;
   sistema: Block;
   respuestas: Block;
 }
@@ -53,7 +65,6 @@ function ago(now: number, ts: number | null): string {
 
 export function buildDashboardStatus(i: DashboardInput): DashboardStatus {
   // --- ENVÍOS ---
-  // 🔴 si lleva >24h sin enviar nada (y ya hubo envíos antes). 🟢 si hay actividad reciente.
   const sentStale = i.lastSentAt != null && i.now - i.lastSentAt > DAY;
   const neverSent = i.lastSentAt == null;
   const envios: Block = {
@@ -62,26 +73,72 @@ export function buildDashboardStatus(i: DashboardInput): DashboardStatus {
     lines: [
       `Hoy: ${i.sentToday} enviados`,
       `En cola: ${i.queued}`,
-      `Último envío: ${ago(i.now, i.lastSentAt)}`,
-      `Contactados (total): ${i.totalContacted}`,
+      `Último: ${i.lastEmailedBusiness ?? '—'}`,
+      `(${ago(i.now, i.lastSentAt)})`,
     ],
   };
 
+  // --- PRÓXIMO EMAIL ---
+  const proximo: Block = {
+    light: i.nextLead ? 'green' : 'amber',
+    title: 'Próximo email',
+    lines: i.nextLead
+      ? [i.nextLead.business_name, i.nextLead.city ?? '—']
+      : ['Cola vacía', 'Esperando al scraper'],
+  };
+
+  // --- GRÁFICA 7 DÍAS ---
+  const total7 = i.dailySent.reduce((s, d) => s + d.count, 0);
+  const grafica: DashboardStatus['grafica'] = {
+    light: 'green',
+    title: 'Envíos · 7 días',
+    lines: [`Total semana: ${total7}`],
+    bars: i.dailySent,
+  };
+
+  // --- EMBUDO ---
+  const embudo: DashboardStatus['embudo'] = {
+    light: 'green',
+    title: 'Embudo de leads',
+    lines: [],
+    funnel: i.funnel,
+  };
+
   // --- CRÉDITOS / FUENTES ---
-  // 🔴 si hay errores de quota recientes (Serper/Firecrawl sin saldo). 🟢 si no.
-  const creditos: Block = {
-    light: i.recentQuotaErrors > 0 ? 'red' : 'green',
+  const apifyPct = i.apify && i.apify.limitUsd > 0
+    ? Math.round((i.apify.usedUsd / i.apify.limitUsd) * 100)
+    : null;
+  const apifyHigh = apifyPct != null && apifyPct >= 90;
+  const creditos: DashboardStatus['creditos'] = {
+    light: i.recentQuotaErrors > 0 || apifyHigh ? 'red' : 'green',
     title: 'Créditos / Fuentes',
     lines: [
+      i.apify
+        ? `Apify: $${i.apify.usedUsd.toFixed(2)} / $${i.apify.limitUsd} (${apifyPct}%)`
+        : 'Apify: n/d',
       i.recentQuotaErrors > 0
         ? `⚠ ${i.recentQuotaErrors} fallos de saldo (24h)`
         : 'Serper activo, sin fallos',
       `Último enriquecido: ${ago(i.now, i.lastEnrichAt)}`,
     ],
+    apifyPct,
+  };
+
+  // --- INSTANTLY ---
+  const instantly: Block = {
+    light: i.instantly ? 'green' : 'amber',
+    title: 'Instantly (campaña)',
+    lines: i.instantly
+      ? [
+          `Enviados: ${i.instantly.emailsSent}`,
+          `Aperturas: ${i.instantly.opens}`,
+          `Respuestas: ${i.instantly.replies}`,
+          `Rebotes: ${i.instantly.bounced}`,
+        ]
+      : ['API no disponible', 'Revisar conexión'],
   };
 
   // --- SISTEMA ---
-  // 🔴 si sender >24h o watcher >1h sin correr (mismos umbrales que los watchdogs).
   const senderStale = i.lastSenderRun == null || i.now - i.lastSenderRun > DAY;
   const watcherStale = i.lastWatcherRun == null || i.now - i.lastWatcherRun > HOUR;
   const sistema: Block = {
@@ -96,22 +153,20 @@ export function buildDashboardStatus(i: DashboardInput): DashboardStatus {
   };
 
   // --- RESPUESTAS ---
-  // 🟡 (informativo) si hay alguna respuesta reciente, para que no se pierda.
   const recentReply = i.lastRespondedAt != null && i.now - i.lastRespondedAt < 3 * DAY;
   const respuestas: Block = {
     light: recentReply ? 'amber' : 'green',
     title: 'Respuestas',
     lines: [
       recentReply ? '¡Respuesta reciente!' : 'Sin respuestas nuevas',
-      `Total respondidos: ${i.totalResponded}`,
+      `Total: ${i.totalResponded}`,
       `Última: ${ago(i.now, i.lastRespondedAt)}`,
     ],
   };
 
-  // --- GLOBAL ---
-  // 🔴 si algún bloque está 🔴. Si no, 🟢 (el ámbar de respuestas es buena señal, no alerta).
-  const anyRed = [envios, creditos, sistema, respuestas].some(b => b.light === 'red');
+  // --- GLOBAL --- (rojo si algún bloque crítico está rojo)
+  const anyRed = [envios, creditos, sistema].some(b => b.light === 'red');
   const global: Light = anyRed ? 'red' : 'green';
 
-  return { global, updatedAt: i.now, envios, creditos, sistema, respuestas };
+  return { global, updatedAt: i.now, envios, proximo, grafica, embudo, creditos, instantly, sistema, respuestas };
 }

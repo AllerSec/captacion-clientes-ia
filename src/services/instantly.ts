@@ -184,3 +184,37 @@ export function getLeadDbIdFromCustom(lead: InstantlyLead): string | null {
   const v = lead.custom_variables?.lead_db_id;
   return typeof v === 'string' ? v : null;
 }
+
+export interface InstantlyAnalytics {
+  emailsSent: number;
+  contacted: number;
+  opens: number;
+  replies: number;
+  bounced: number;
+}
+
+/**
+ * Analítica de la campaña en vivo. Endpoint verificado:
+ * GET /campaigns/analytics?id=<campaignId> → [{ emails_sent_count, open_count, ... }].
+ * Solo lectura; devuelve null si falla (el panel lo marca como caído).
+ */
+export async function getCampaignAnalytics(): Promise<InstantlyAnalytics | null> {
+  try {
+    const res = await fetch(`${API_BASE}/campaigns/analytics?id=${campaignId()}`, {
+      headers: authHeaders(),
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as any[];
+    const a = Array.isArray(data) ? data[0] : data;
+    if (!a) return null;
+    return {
+      emailsSent: a.emails_sent_count ?? 0,
+      contacted: a.contacted_count ?? 0,
+      opens: a.open_count ?? 0,
+      replies: a.reply_count ?? 0,
+      bounced: a.bounced_count ?? 0,
+    };
+  } catch {
+    return null;
+  }
+}

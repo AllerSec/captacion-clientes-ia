@@ -289,3 +289,74 @@ export async function countRecentQuotaErrors(hours = 24): Promise<number> {
     return count ?? 0;
   });
 }
+
+/** Próximo lead que el sender enviará (siguiente READY_TO_SEND por orden de cola). */
+export async function getNextQueuedLead(): Promise<{ business_name: string; city: string | null } | null> {
+  const { data, error } = await getClient()
+    .from('leads')
+    .select('business_name, city')
+    .eq('status', 'READY_TO_SEND')
+    .order('created_at', { ascending: true })
+    .limit(1);
+  if (error) throw new Error(`getNextQueuedLead: ${error.message}`);
+  return data?.[0] ?? null;
+}
+
+/** Último negocio al que se le envió email (join emails_sent → leads por lead_id). */
+export async function getLastEmailedBusiness(): Promise<{ business_name: string; sent_at: string } | null> {
+  const { data, error } = await getClient()
+    .from('emails_sent')
+    .select('sent_at, leads(business_name)')
+    .order('sent_at', { ascending: false })
+    .limit(1);
+  if (error) throw new Error(`getLastEmailedBusiness: ${error.message}`);
+  const row: any = data?.[0];
+  if (!row) return null;
+  const name = Array.isArray(row.leads) ? row.leads[0]?.business_name : row.leads?.business_name;
+  return { business_name: name ?? '—', sent_at: row.sent_at };
+}
+
+/** Conteo de emails enviados por día en los últimos `days` días (para la gráfica). */
+export async function getDailySentCounts(days = 7): Promise<Array<{ day: string; count: number }>> {
+  const since = new Date(Date.now() - days * 24 * 3600_000);
+  since.setHours(0, 0, 0, 0);
+  const { data, error } = await getClient()
+    .from('emails_sent')
+    .select('sent_at')
+    .gte('sent_at', since.toISOString());
+  if (error) throw new Error(`getDailySentCounts: ${error.message}`);
+  // Agrupar por día (clave YYYY-MM-DD) en JS.
+  const buckets = new Map<string, number>();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
+    buckets.set(d.toISOString().slice(0, 10), 0);
+  }
+  for (const r of (data ?? []) as Array<{ sent_at: string }>) {
+    const key = new Date(r.sent_at).toISOString().slice(0, 10);
+    if (buckets.has(key)) buckets.set(key, (buckets.get(key) ?? 0) + 1);
+  }
+  return [...buckets.entries()].map(([day, count]) => ({ day, count }));
+}
+
+/** Embudo: total scrapeado, con email, en cola, contactado, respondido. */
+export async function getFunnelCounts(): Promise<{
+  scraped: number; withEmail: number; queued: number; contacted: number; responded: number;
+}> {
+  const c = getClient();
+  const head = { count: 'exact' as const, head: true };
+  const [scraped, withEmail, ready, queued, contacted, responded] = await Promise.all([
+    c.from('leads').select('*', head),
+    c.from('leads').select('*', head).not('email', 'is', null).neq('email', ''),
+    c.from('leads').select('*', head).eq('status', 'READY_TO_SEND'),
+    c.from('leads').select('*', head).eq('status', 'QUEUED'),
+    c.from('leads').select('*', head).eq('status', 'CONTACTED'),
+    c.from('leads').select('*', head).eq('status', 'RESPONDED'),
+  ]);
+  return {
+    scraped: scraped.count ?? 0,
+    withEmail: withEmail.count ?? 0,
+    queued: (ready.count ?? 0) + (queued.count ?? 0),
+    contacted: contacted.count ?? 0,
+    responded: responded.count ?? 0,
+  };
+}
