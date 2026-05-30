@@ -1,4 +1,4 @@
-import { searchBusinessInfo } from './firecrawl.js';
+import { searchBusinessInfo } from './serper.js';
 import { judgeEnrichment } from './claude.js';
 
 export interface EnrichInput {

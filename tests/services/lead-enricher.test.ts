@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../src/services/firecrawl.js', () => ({
+vi.mock('../../src/services/serper.js', () => ({
   searchBusinessInfo: vi.fn(),
 }));
 vi.mock('../../src/services/claude.js', () => ({
   judgeEnrichment: vi.fn(),
 }));
 
-import { searchBusinessInfo } from '../../src/services/firecrawl.js';
+import { searchBusinessInfo } from '../../src/services/serper.js';
 import { judgeEnrichment } from '../../src/services/claude.js';
 import { enrichLead } from '../../src/services/lead-enricher.js';
 
@@ -73,7 +73,7 @@ describe('enrichLead', () => {
     expect(r.kind).toBe('nothing_found');
   });
 
-  it('returns error when Firecrawl fails', async () => {
+  it('returns error when the search source fails', async () => {
     searchMock.mockResolvedValue({ ok: false, query: 'q', error: 'ENOTFOUND', durationMs: 100 });
     const r = await enrichLead({
       business_name: 'X', city: 'Bilbao', province: null, category: null,
