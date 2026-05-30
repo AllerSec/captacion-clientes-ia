@@ -25,17 +25,31 @@ describe('isPanelAuthorized', () => {
 });
 
 describe('extractToken', () => {
-  it('extrae key de la query', () => {
+  it('extrae key de la query (fallback para favorito)', () => {
     expect(extractToken('/panel?key=abc')).toBe('abc');
     expect(extractToken('/panel/data?key=abc&x=1')).toBe('abc');
   });
 
-  it('devuelve null si no hay query o no hay key', () => {
+  it('devuelve null si no hay query ni header', () => {
     expect(extractToken('/panel')).toBe(null);
     expect(extractToken('/panel?x=1')).toBe(null);
   });
 
   it('decodifica valores url-encoded', () => {
     expect(extractToken('/panel?key=a%20b')).toBe('a b');
+  });
+
+  it('prefiere el header Authorization: Bearer sobre la query', () => {
+    expect(extractToken('/panel/data', 'Bearer fromheader')).toBe('fromheader');
+    expect(extractToken('/panel/data?key=fromquery', 'Bearer fromheader')).toBe('fromheader');
+  });
+
+  it('cae a la query si el header no es Bearer válido', () => {
+    expect(extractToken('/panel/data?key=q', 'Basic xyz')).toBe('q');
+    expect(extractToken('/panel/data?key=q', 'Bearer ')).toBe('q');
+  });
+
+  it('maneja header como array (cabeceras repetidas)', () => {
+    expect(extractToken('/panel/data', ['Bearer arr'])).toBe('arr');
   });
 });

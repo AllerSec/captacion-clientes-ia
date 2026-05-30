@@ -133,13 +133,19 @@ function card(key, b) {
 }
 function escape(s){ return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 
+// Lee el token de la URL UNA vez (para abrir desde favorito), lo guarda en memoria
+// y lo borra de la barra de direcciones para que no quede en el historial.
+const PANEL_KEY = (function () {
+  const k = new URLSearchParams(location.search).get('key');
+  if (k) history.replaceState(null, '', location.pathname);
+  return k;
+})();
+
 async function refresh() {
   try {
-    // Reenvía el ?key= de la URL actual a la petición de datos (si el panel
-    // está protegido por token, /panel/data también lo exige).
-    const key = new URLSearchParams(location.search).get('key');
-    const dataUrl = '/panel/data' + (key ? '?key=' + encodeURIComponent(key) : '');
-    const r = await fetch(dataUrl, { cache: 'no-store' });
+    // El token va por header Authorization (no en la URL → fuera de los logs).
+    const headers = PANEL_KEY ? { 'Authorization': 'Bearer ' + PANEL_KEY } : {};
+    const r = await fetch('/panel/data', { headers, cache: 'no-store' });
     const d = await r.json();
     if (d.ok === false) throw new Error(d.error || 'sin datos');
     const g = light(d.global);

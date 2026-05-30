@@ -47,7 +47,7 @@ http.createServer(async (req, res) => {
     res.end(JSON.stringify({ status: 'ok', lastSenderRun, lastWatcherRun }));
   } else if (url === '/panel' || url === '/panel/data') {
     // Gate opcional por token (PANEL_TOKEN). Si no está configurado, acceso abierto.
-    if (!isPanelAuthorized(env.PANEL_TOKEN, extractToken(req.url ?? ''))) {
+    if (!isPanelAuthorized(env.PANEL_TOKEN, extractToken(req.url ?? '', req.headers['authorization']))) {
       res.writeHead(401, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: 'unauthorized' }));
       return;
