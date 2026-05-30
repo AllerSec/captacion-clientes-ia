@@ -27,6 +27,7 @@ function base(over: Partial<DashboardInput> = {}): DashboardInput {
     lastSenderRun: NOW - 3 * 60000,
     lastWatcherRun: NOW - 4 * 60000,
     deployCommit: 'ee5de0cabc123',
+    dbRows: 2411,
     totalResponded: 1,
     lastRespondedAt: null,
     ...over,
@@ -82,6 +83,12 @@ describe('buildDashboardStatus (ampliado)', () => {
     const s = buildDashboardStatus(base({ apify: null }));
     expect(s.creditos.apifyPct).toBe(null);
     expect(s.creditos.lines[0]).toContain('n/d');
+  });
+
+  it('créditos: expone apify y dbRows para las tarjetas del centro de mando', () => {
+    const s = buildDashboardStatus(base());
+    expect(s.creditos.dbRows).toBe(2411);
+    expect(s.creditos.apify?.limitUsd).toBe(29);
   });
 
   it('instantly: muestra métricas en vivo', () => {

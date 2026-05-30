@@ -290,6 +290,17 @@ export async function countRecentQuotaErrors(hours = 24): Promise<number> {
   });
 }
 
+/** Total de filas en leads (para la tarjeta de Supabase del centro de mando). */
+export async function countAllLeads(): Promise<number> {
+  return withRetry(async () => {
+    const { count, error } = await getClient()
+      .from('leads')
+      .select('*', { count: 'exact', head: true });
+    if (error) throw new Error(`countAllLeads: ${error.message}`);
+    return count ?? 0;
+  });
+}
+
 /** Próximo lead que el sender enviará (siguiente READY_TO_SEND por orden de cola). */
 export async function getNextQueuedLead(): Promise<{ business_name: string; city: string | null } | null> {
   const { data, error } = await getClient()

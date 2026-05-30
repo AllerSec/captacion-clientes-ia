@@ -13,6 +13,7 @@ import { PANEL_HTML } from './web/panel-html.js';
 import { getDashboardData } from './services/dashboard-data.js';
 import { markSenderRun, markWatcherRun, getRuntimeState } from './core/runtime-state.js';
 import { isPanelAuthorized, extractToken } from './core/panel-auth.js';
+import { tryAcquireScrape, releaseScrape } from './core/scrape-lock.js';
 
 const env = loadEnv();
 const log = logger.child({ component: 'main' });
@@ -68,6 +69,33 @@ http.createServer(async (req, res) => {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: 'internal' }));
     }
+  } else if (url === '/panel/action/scrape') {
+    // Acción que EJECUTA: token obligatorio siempre + solo POST + candado anti-repetición.
+    if (req.method !== 'POST') {
+      res.writeHead(405, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'method_not_allowed' }));
+      return;
+    }
+    // El token es obligatorio aquí aunque el panel base no lo tenga configurado:
+    // una acción que ejecuta NUNCA debe quedar abierta.
+    if (!env.PANEL_TOKEN || !isPanelAuthorized(env.PANEL_TOKEN, extractToken(req.url ?? '', req.headers['authorization']))) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'unauthorized' }));
+      return;
+    }
+    if (!tryAcquireScrape()) {
+      res.writeHead(409, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'scrape_already_running' }));
+      return;
+    }
+    // Lanza en segundo plano: respondemos ya, el scrape sigue en el proceso.
+    log.info('manual scrape triggered from panel');
+    runScraperAuto()
+      .then(() => log.info('manual scrape finished'))
+      .catch(err => log.error({ err: err instanceof Error ? err.message : String(err) }, 'manual scrape failed'))
+      .finally(() => releaseScrape());
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, started: true }));
   } else {
     res.writeHead(404); res.end();
   }

@@ -2,6 +2,7 @@ import {
   countSentToday, getLastSentAt, countReadyToSend, countLeadsByStatus,
   getLastEnrichedAt, getLastRespondedAt, countRecentQuotaErrors,
   getNextQueuedLead, getLastEmailedBusiness, getDailySentCounts, getFunnelCounts,
+  countAllLeads,
 } from './supabase.js';
 import { getApifyUsage } from './apify-usage.js';
 import { getCampaignAnalytics } from './instantly.js';
@@ -19,7 +20,7 @@ export async function getDashboardData(): Promise<DashboardStatus> {
   const [
     sentToday, lastSentAt, ready, queuedSending,
     totalResponded, lastEnrichAt, lastRespondedAt, recentQuotaErrors,
-    nextLead, lastEmailed, dailySent, funnel, apify, instantly,
+    nextLead, lastEmailed, dailySent, funnel, apify, instantly, dbRows,
   ] = await Promise.all([
     countSentToday(),
     getLastSentAt(),
@@ -35,6 +36,7 @@ export async function getDashboardData(): Promise<DashboardStatus> {
     getFunnelCounts(),
     getApifyUsage(),
     getCampaignAnalytics(),
+    countAllLeads(),
   ]);
 
   const { lastSenderRun, lastWatcherRun } = getRuntimeState();
@@ -55,6 +57,7 @@ export async function getDashboardData(): Promise<DashboardStatus> {
     lastSenderRun,
     lastWatcherRun,
     deployCommit: process.env.RAILWAY_GIT_COMMIT_SHA ?? null,
+    dbRows,
     totalResponded,
     lastRespondedAt: lastRespondedAt ? lastRespondedAt.getTime() : null,
   });

@@ -27,6 +27,7 @@ export interface DashboardInput {
   lastSenderRun: number | null;
   lastWatcherRun: number | null;
   deployCommit: string | null;
+  dbRows: number;
   // Respuestas
   totalResponded: number;
   lastRespondedAt: number | null;
@@ -45,7 +46,7 @@ export interface DashboardStatus {
   proximo: Block;
   grafica: Block & { bars: Array<{ day: string; count: number }> };
   embudo: Block & { funnel: DashboardInput['funnel'] };
-  creditos: Block & { apifyPct: number | null };
+  creditos: Block & { apifyPct: number | null; apify: DashboardInput['apify']; dbRows: number };
   instantly: Block;
   sistema: Block;
   respuestas: Block;
@@ -122,6 +123,8 @@ export function buildDashboardStatus(i: DashboardInput): DashboardStatus {
       `Último enriquecido: ${ago(i.now, i.lastEnrichAt)}`,
     ],
     apifyPct,
+    apify: i.apify,
+    dbRows: i.dbRows,
   };
 
   // --- INSTANTLY ---
