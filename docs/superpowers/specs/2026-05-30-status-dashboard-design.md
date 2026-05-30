@@ -53,10 +53,16 @@ La lectura de DB (services) y el ensamblado van en `src/services/dashboard-data.
    - `PANEL_HTML: string` — el HTML/CSS/JS inline de la página. 4 bloques en grid 2x2
      + cabecera con semáforo global y hora de actualización. Responsive (móvil: 1
      columna, sigue sin scroll en pantallas normales).
-   - **El diseño visual sigue las guías de la skill `ui-ux-pro-max`**: estilo limpio
-     y moderno (dark mode por defecto, buen contraste para los semáforos, jerarquía
-     tipográfica clara, espaciado generoso, estados de color accesibles). Sigue siendo
-     HTML/CSS plano inline (sin framework), pero con criterio de diseño profesional.
+   - **El diseño visual sigue el design system de `ui-ux-pro-max`** (patrón
+     "Real-Time / Operations", estilo Dark Mode OLED):
+     - Fondo `#0F172A`, superficies `#1E293B`, muted `#272F42`, borde `#475569`.
+     - Texto `#F8FAFC` (primario), secundario más tenue con contraste ≥3:1.
+     - Semáforos: verde `#22C55E`, ámbar `#F59E0B`, rojo `#EF4444`.
+     - Tipografía Google Fonts **Fira Sans** (texto) + **Fira Code** (cifras/datos,
+       tabular para que no bailen los números).
+     - Efecto glow sutil en el punto de estado (`text-shadow: 0 0 10px`).
+     - Iconos SVG inline (Lucide), NO emojis. cursor-pointer en enlaces, hover 150-300ms,
+       focus visible, `prefers-reduced-motion` respetado, responsive 375/768/1024/1440.
 
 4. **`src/index.ts`** (modificado)
    - El handler HTTP añade `/panel` (sirve `PANEL_HTML`) y `/panel/data` (sirve
