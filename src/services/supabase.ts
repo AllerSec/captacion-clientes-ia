@@ -230,3 +230,62 @@ export async function countReadyToSend(): Promise<number> {
     return count ?? 0;
   });
 }
+
+// ---- Lecturas para el panel de estado (read-only) ----
+
+export async function countLeadsByStatus(status: string): Promise<number> {
+  return withRetry(async () => {
+    const { count, error } = await getClient()
+      .from('leads')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', status);
+    if (error) throw new Error(`countLeadsByStatus(${status}): ${error.message}`);
+    return count ?? 0;
+  });
+}
+
+/** Último lead que recibió un email propio del negocio vía enrichment (enriched_via='search'). */
+export async function getLastEnrichedAt(): Promise<Date | null> {
+  const { data, error } = await getClient()
+    .from('leads')
+    .select('enriched_at')
+    .eq('enriched_via', 'search')
+    .not('enriched_at', 'is', null)
+    .order('enriched_at', { ascending: false })
+    .limit(1);
+  if (error) throw new Error(`getLastEnrichedAt: ${error.message}`);
+  return data?.[0]?.enriched_at ? new Date(data[0].enriched_at) : null;
+}
+
+/** Última respuesta humana (lead RESPONDED) por responded_at. */
+export async function getLastRespondedAt(): Promise<Date | null> {
+  const { data, error } = await getClient()
+    .from('leads')
+    .select('responded_at')
+    .eq('status', 'RESPONDED')
+    .not('responded_at', 'is', null)
+    .order('responded_at', { ascending: false })
+    .limit(1);
+  if (error) throw new Error(`getLastRespondedAt: ${error.message}`);
+  return data?.[0]?.responded_at ? new Date(data[0].responded_at) : null;
+}
+
+/**
+ * Cuenta leads enriquecidos en las últimas `hours` horas cuyo `notes` indica
+ * falta de saldo de la fuente de email (Serper o Firecrawl). Es la señal
+ * temprana de "te estás quedando sin créditos".
+ */
+export async function countRecentQuotaErrors(hours = 24): Promise<number> {
+  const since = new Date(Date.now() - hours * 3600_000).toISOString();
+  return withRetry(async () => {
+    const { count, error } = await getClient()
+      .from('leads')
+      .select('*', { count: 'exact', head: true })
+      .gte('enriched_at', since)
+      .or(
+        'notes.ilike.%serper_quota%,notes.ilike.%Insufficient credits%,notes.ilike.%serper_no_api_key%',
+      );
+    if (error) throw new Error(`countRecentQuotaErrors: ${error.message}`);
+    return count ?? 0;
+  });
+}

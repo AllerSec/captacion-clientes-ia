@@ -9,6 +9,9 @@ import { notifyError } from './core/health-monitor.js';
 import { runDailySummary } from './jobs/daily-summary.js';
 import { ensureVariantsSeeded } from './config/variants.js';
 import { ensureCampaignSequence } from './services/instantly.js';
+import { PANEL_HTML } from './web/panel-html.js';
+import { getDashboardData } from './services/dashboard-data.js';
+import { markSenderRun, markWatcherRun, getRuntimeState } from './core/runtime-state.js';
 
 const env = loadEnv();
 const log = logger.child({ component: 'main' });
@@ -28,19 +31,30 @@ ensureCampaignSequence().catch(err => {
     .catch(() => { /* health-monitor itself broken, swallow */ });
 });
 
-let lastSenderRun = Date.now();
-let lastWatcherRun = Date.now();
-
-// Health endpoint for Railway
+// Health + panel server for Railway
 const port = parseInt(process.env.PORT ?? '3000');
-http.createServer((req, res) => {
-  if (req.url === '/health') {
+http.createServer(async (req, res) => {
+  const url = (req.url ?? '').split('?')[0];
+  if (url === '/health') {
+    const { lastSenderRun, lastWatcherRun } = getRuntimeState();
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'ok', lastSenderRun, lastWatcherRun }));
+  } else if (url === '/panel') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(PANEL_HTML);
+  } else if (url === '/panel/data') {
+    try {
+      const data = await getDashboardData();
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify(data));
+    } catch (err) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: err instanceof Error ? err.message : String(err) }));
+    }
   } else {
     res.writeHead(404); res.end();
   }
-}).listen(port, () => log.info({ port }, 'health server up'));
+}).listen(port, () => log.info({ port }, 'health+panel server up'));
 
 // SCRAPER: 07:00 ES every day
 cron.schedule('0 7 * * *', async () => {
@@ -52,7 +66,7 @@ cron.schedule('0 7 * * *', async () => {
 cron.schedule('*/3 * * * *', async () => {
   try {
     await runSender();
-    lastSenderRun = Date.now();
+    markSenderRun();
   } catch (err) { log.error({ err }, 'sender failed'); }
 }, { timezone: env.TZ });
 
@@ -60,16 +74,17 @@ cron.schedule('*/3 * * * *', async () => {
 cron.schedule('*/5 * * * *', async () => {
   try {
     await runWatcher();
-    lastWatcherRun = Date.now();
+    markWatcherRun();
   } catch (err) { log.error({ err }, 'watcher failed'); }
 }, { timezone: env.TZ });
 
 // WATCHDOGS: every 30 min
 cron.schedule('*/30 * * * *', async () => {
-  const senderStale = Date.now() - lastSenderRun > 24 * 3600_000;
-  const watcherStale = Date.now() - lastWatcherRun > 3600_000;
-  if (senderStale) await notifyError('error', 'Sender watchdog', `Sender has not run in >24h. Last: ${new Date(lastSenderRun).toISOString()}`);
-  if (watcherStale) await notifyError('error', 'Watcher watchdog', `Watcher has not run in >1h. Last: ${new Date(lastWatcherRun).toISOString()}`);
+  const { lastSenderRun, lastWatcherRun } = getRuntimeState();
+  const senderStale = lastSenderRun != null && Date.now() - lastSenderRun > 24 * 3600_000;
+  const watcherStale = lastWatcherRun != null && Date.now() - lastWatcherRun > 3600_000;
+  if (senderStale) await notifyError('error', 'Sender watchdog', `Sender has not run in >24h. Last: ${new Date(lastSenderRun!).toISOString()}`);
+  if (watcherStale) await notifyError('error', 'Watcher watchdog', `Watcher has not run in >1h. Last: ${new Date(lastWatcherRun!).toISOString()}`);
 }, { timezone: env.TZ });
 
 // DAILY SUMMARY: every day at 21:00 ES
