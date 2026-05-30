@@ -12,6 +12,7 @@ import { ensureCampaignSequence } from './services/instantly.js';
 import { PANEL_HTML } from './web/panel-html.js';
 import { getDashboardData } from './services/dashboard-data.js';
 import { markSenderRun, markWatcherRun, getRuntimeState } from './core/runtime-state.js';
+import { isPanelAuthorized, extractToken } from './core/panel-auth.js';
 
 const env = loadEnv();
 const log = logger.child({ component: 'main' });
@@ -31,6 +32,11 @@ ensureCampaignSequence().catch(err => {
     .catch(() => { /* health-monitor itself broken, swallow */ });
 });
 
+// Marca de arranque del proceso. El watchdog la usa como referencia cuando un
+// job aún no ha corrido (lastSenderRun/lastWatcherRun == null), para no quedarse
+// fail-open si un deploy arranca el proceso pero no ejecuta los crons.
+const bootAt = Date.now();
+
 // Health + panel server for Railway
 const port = parseInt(process.env.PORT ?? '3000');
 http.createServer(async (req, res) => {
@@ -39,17 +45,28 @@ http.createServer(async (req, res) => {
     const { lastSenderRun, lastWatcherRun } = getRuntimeState();
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'ok', lastSenderRun, lastWatcherRun }));
-  } else if (url === '/panel') {
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(PANEL_HTML);
-  } else if (url === '/panel/data') {
+  } else if (url === '/panel' || url === '/panel/data') {
+    // Gate opcional por token (PANEL_TOKEN). Si no está configurado, acceso abierto.
+    if (!isPanelAuthorized(env.PANEL_TOKEN, extractToken(req.url ?? ''))) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'unauthorized' }));
+      return;
+    }
+    if (url === '/panel') {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(PANEL_HTML);
+      return;
+    }
     try {
       const data = await getDashboardData();
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
       res.end(JSON.stringify(data));
     } catch (err) {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: false, error: err instanceof Error ? err.message : String(err) }));
+      // No filtramos el mensaje crudo de Supabase al cliente: log server-side,
+      // respuesta genérica. El panel solo necesita saber que no pudo leer.
+      log.error({ err: err instanceof Error ? err.message : String(err) }, 'panel data failed');
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'internal' }));
     }
   } else {
     res.writeHead(404); res.end();
@@ -81,10 +98,16 @@ cron.schedule('*/5 * * * *', async () => {
 // WATCHDOGS: every 30 min
 cron.schedule('*/30 * * * *', async () => {
   const { lastSenderRun, lastWatcherRun } = getRuntimeState();
-  const senderStale = lastSenderRun != null && Date.now() - lastSenderRun > 24 * 3600_000;
-  const watcherStale = lastWatcherRun != null && Date.now() - lastWatcherRun > 3600_000;
-  if (senderStale) await notifyError('error', 'Sender watchdog', `Sender has not run in >24h. Last: ${new Date(lastSenderRun!).toISOString()}`);
-  if (watcherStale) await notifyError('error', 'Watcher watchdog', `Watcher has not run in >1h. Last: ${new Date(lastWatcherRun!).toISOString()}`);
+  // Fail-safe: si un job NUNCA ha corrido (null), lo tratamos como caído una vez
+  // pasado el periodo de gracia desde el arranque. Así un deploy que arranca el
+  // proceso pero no ejecuta los crons SÍ dispara alerta (no se queda callado).
+  const sinceSender = lastSenderRun ?? bootAt;
+  const sinceWatcher = lastWatcherRun ?? bootAt;
+  const senderStale = Date.now() - sinceSender > 24 * 3600_000;
+  const watcherStale = Date.now() - sinceWatcher > 3600_000;
+  const desc = (ts: number | null) => ts == null ? 'nunca desde el arranque' : new Date(ts).toISOString();
+  if (senderStale) await notifyError('error', 'Sender watchdog', `Sender lleva >24h sin ejecutarse. Último: ${desc(lastSenderRun)}`);
+  if (watcherStale) await notifyError('error', 'Watcher watchdog', `Watcher lleva >1h sin ejecutarse. Último: ${desc(lastWatcherRun)}`);
 }, { timezone: env.TZ });
 
 // DAILY SUMMARY: every day at 21:00 ES

@@ -135,7 +135,11 @@ function escape(s){ return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&
 
 async function refresh() {
   try {
-    const r = await fetch('/panel/data', { cache: 'no-store' });
+    // Reenvía el ?key= de la URL actual a la petición de datos (si el panel
+    // está protegido por token, /panel/data también lo exige).
+    const key = new URLSearchParams(location.search).get('key');
+    const dataUrl = '/panel/data' + (key ? '?key=' + encodeURIComponent(key) : '');
+    const r = await fetch(dataUrl, { cache: 'no-store' });
     const d = await r.json();
     if (d.ok === false) throw new Error(d.error || 'sin datos');
     const g = light(d.global);

@@ -9,6 +9,7 @@ const schema = z.object({
   ANTHROPIC_MODEL: z.string().default('claude-sonnet-4-6'),
   FIRECRAWL_API_KEY: z.string().startsWith('fc-'),
   SERPER_API_KEY: z.string().min(1).optional(),
+  PANEL_TOKEN: z.string().min(1).optional(),
   GMAIL_CLIENT_ID: z.string().min(1).optional(),
   GMAIL_CLIENT_SECRET: z.string().min(1).optional(),
   GMAIL_REFRESH_TOKEN: z.string().min(1).optional(),
