@@ -9,8 +9,10 @@ export interface SectorInfo {
 
 const SECTOR_MAP: Array<{ pattern: RegExp; info: SectorInfo }> = [
   // industria va ANTES que taller porque "mecanizado" matchearía /mecán/.
+  // Cubre cómo Google Maps etiqueta de verdad estas empresas: la categoría suele ser
+  // "Ingeniero industrial", "Taller metalúrgico", "Fábrica", etc., casi nunca "mecanizado".
   {
-    pattern: /mecanizado|caldereria|calder[eé]r[ií]a|ingenier[ií]a industrial|fabricaci[oó]n met[aá]lica|industria del acero|tornerí|torner[ií]a/i,
+    pattern: /mecanizado|mecaniz|caldecer|caldereria|calder[eé]r[ií]a|ingenier[ií]a\s+industrial|ingenier[oa]\s+industrial|fabricaci[oó]n\s+met[aá]lica|industria\s+del\s+acero|metal[uú]rgic|metal[ií]stic|fundici[oó]n|tornerí|torner[ií]a|troquel|estampaci[oó]n|fresado|\bcnc\b|carpinter[ií]a\s+met[aá]lica|construcciones?\s+met[aá]licas/i,
     info: { sector: 'industria', exampleUrl: 'tecmac.es', clientWord: 'clientes', sectorLabel: 'empresa de mecanizado' },
   },
   {

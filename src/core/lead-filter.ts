@@ -1,4 +1,4 @@
-import { isLikelyFranchise } from './business-name.js';
+import { isLikelyFranchise, isLikelyJunkName } from './business-name.js';
 
 export interface LeadInput {
   business_name: string;
@@ -39,6 +39,9 @@ export function qualifyLead(l: LeadInput): QualifyResult {
   if (isLikelyFranchise(l.business_name)) {
     return { qualified: false, reason: 'franchise' };
   }
+  if (isLikelyJunkName(l.business_name)) {
+    return { qualified: false, reason: 'junk_name' };
+  }
 
   // Tiene web: fuera del alcance. Solo contactamos negocios SIN web.
   if (l.website) return { qualified: false, reason: 'has_website' };
@@ -64,6 +67,9 @@ export function qualifyLeadPreEnrich(l: PreEnrichInput): QualifyResult {
   }
   if (isLikelyFranchise(l.business_name)) {
     return { qualified: false, reason: 'franchise' };
+  }
+  if (isLikelyJunkName(l.business_name)) {
+    return { qualified: false, reason: 'junk_name' };
   }
   return { qualified: true };
 }

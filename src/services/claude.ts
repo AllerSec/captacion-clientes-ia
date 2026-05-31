@@ -77,7 +77,11 @@ export async function generateEmail(input: GenerateEmailInput): Promise<Generate
     if (typeof p[k] !== 'string') throw new Error(`Claude tool output missing ${k}`);
   }
   return {
-    subject: p.subject as string,
+    // Forzamos minúsculas en el subject: la skill cold-email exige asunto en
+    // minúsculas (internal-camouflage), pero el modelo tiende a capitalizar el
+    // nombre propio del competidor ("Talleres Duerna en google"). Determinista,
+    // no depende de que el modelo obedezca la instrucción.
+    subject: (p.subject as string).toLocaleLowerCase('es-ES'),
     bodies: [
       p.email1_body as string,
       p.email2_body as string,

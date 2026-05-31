@@ -37,14 +37,14 @@ vi.mock('../../src/core/health-monitor.js', () => ({ notifyError: vi.fn() }));
 // Secuencia válida en el NUEVO diseño (2026-05-31): email1 SIN precio, con
 // competidor + enlace del caso; precio SOLO en FU3; unaxaller.com en FU2.
 const validSubject = 'taller en Bilbao';
-const validBody = `<p style="margin:0 0 10px 0">Hola, equipo de Taller X:</p>`
-  + `<p style="margin:0 0 10px 0">Buscando talleres en Bilbao en Google encontré a <b>Taller Juanjo</b>, pero a vosotros no os vi, porque no tenéis web. Quien busca por la zona acaba llamando a quien sí aparece.</p>`
-  + `<p style="margin:0 0 10px 0">A un taller de la zona le pasaba igual. Le hice la web (<a href="https://motosarretxe.com">motosarretxe.com</a>) y ahora le llaman para pedir cita y presupuestos que antes se iban a otra.</p>`
+const validBody = `<p style="margin:0 0 10px 0">Hola, Taller X:</p>`
+  + `<p style="margin:0 0 10px 0">Si alguien busca taller en Bilbao, encuentra a <b>Taller Juanjo</b> y a ti no, porque no tienes web. Esas llamadas se van al que sí aparece.</p>`
+  + `<p style="margin:0 0 10px 0">A otro taller le hice la web (<a href="https://motosarretxe.com">motosarretxe.com</a>) y dejó de perderlas. Lo mismo haría por ti.</p>`
   + `<p style="margin:0 0 10px 0">¿Te viene bien que te lo cuente en una llamada de 5 minutos? O por WhatsApp, como prefieras.</p>`
   + `<p style="margin:0 0 10px 0">Un saludo,<br>Unax</p>`;
 
 const fu1 = `<p style="margin:0 0 10px 0">Cuando alguien te busca en Google y no sales, ni te ve. Llama al primero que aparece. ¿Miro tu caso?</p><p style="margin:0 0 10px 0">Unax</p>`;
-const fu2 = `<p style="margin:0 0 10px 0">Un taller estaba igual; ahora se las queda él. Tienes su web y más en <a href="https://unaxaller.com">unaxaller.com</a>. ¿Le echas un ojo?</p>`;
+const fu2 = `<p style="margin:0 0 10px 0">Mejor que contártelo, que lo veas: tienes ejemplos de talleres como el tuyo en <a href="https://unaxaller.com">unaxaller.com</a>. ¿Le echas un ojo?</p>`;
 const fu3 = `<p style="margin:0 0 10px 0">Lo pongo fácil: empiezas sin poner nada y son <b>149€/mes</b>, como el gestor. El primer mes va a prueba: si no te trae más llamadas, no lo pagas. ¿Te enseño cómo quedaría?</p><p style="margin:0 0 10px 0">Unax</p>`;
 const fu4 = `<p style="margin:0 0 10px 0">Lo dejo aquí, último correo. 1 = me interesa, 2 = ahora no, 3 = déjalo. Un abrazo, Unax</p>`;
 const validBodies = [validBody, fu1, fu2, fu3, fu4];

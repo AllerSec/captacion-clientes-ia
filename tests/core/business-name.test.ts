@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cleanBusinessName, isLikelyFranchise, isValidCompetitor } from '../../src/core/business-name.js';
+import { cleanBusinessName, isLikelyFranchise, isValidCompetitor, distinctiveToken, isLikelyJunkName, isSameSectorCompetitor } from '../../src/core/business-name.js';
 
 describe('cleanBusinessName', () => {
   it('downcases ALL CAPS to Title Case', () => {
@@ -21,6 +21,72 @@ describe('cleanBusinessName', () => {
 
   it('handles empty input', () => {
     expect(cleanBusinessName('')).toBe('');
+  });
+});
+
+describe('distinctiveToken', () => {
+  it('extrae la marca ignorando genéricos de sector', () => {
+    expect(distinctiveToken('Taller GTS motor')).toBe('GTS');
+    expect(distinctiveToken('Talleres Egia')).toBe('Egia');
+    expect(distinctiveToken('Óptica Goya')).toBe('Goya');
+  });
+
+  it('limpia paréntesis y forma jurídica', () => {
+    expect(distinctiveToken('AutoZona (Talleres AUTO-PRIX S.L.)')).toBe('AutoZona');
+    expect(distinctiveToken('San Fernando Motor SL')).toBe('Fernando');
+  });
+
+  it('cae al nombre completo si todo es genérico', () => {
+    expect(distinctiveToken('Taller Motor')).toBeTruthy();
+  });
+
+  it('devuelve null para vacío', () => {
+    expect(distinctiveToken('')).toBeNull();
+  });
+});
+
+describe('isLikelyJunkName', () => {
+  it('flags generic corporate shells', () => {
+    expect(isLikelyJunkName('Proximidad Empresarial S L')).toBe(true);
+    expect(isLikelyJunkName('Inversiones del Norte SL')).toBe(true);
+    expect(isLikelyJunkName('Gestión Patrimonial Integral')).toBe(true);
+  });
+
+  it('does NOT flag real local businesses', () => {
+    expect(isLikelyJunkName('Talleres Egia')).toBe(false);
+    expect(isLikelyJunkName('Óptica Goya')).toBe(false);
+    expect(isLikelyJunkName('Farmacia García')).toBe(false);
+  });
+
+  it('flags empty or too-short-after-cleaning names', () => {
+    expect(isLikelyJunkName('')).toBe(true);
+    expect(isLikelyJunkName('SL')).toBe(true);
+  });
+});
+
+describe('isSameSectorCompetitor (política estricta: solo datos correctos)', () => {
+  it('acepta competidor del mismo sector conocido', () => {
+    expect(isSameSectorCompetitor('Óptica Visión', 'optica')).toBe(true);
+    expect(isSameSectorCompetitor('Talleres Duerna', 'taller')).toBe(true);
+  });
+
+  it('rechaza competidor de otro sector conocido (taller vs óptica)', () => {
+    expect(isSameSectorCompetitor('Talleres Duerna', 'optica')).toBe(false);
+  });
+
+  it('rechaza competidor de sector indeterminado en un lead de sector conocido', () => {
+    // Datos sucios de Google Maps: no son de la misma actividad → fuera.
+    expect(isSameSectorCompetitor('Radiokable', 'optica')).toBe(false);
+    expect(isSameSectorCompetitor('Casa Pepe', 'farmacia')).toBe(false);
+  });
+
+  it('no exige sector cuando el lead es unknown (no hay con qué comparar)', () => {
+    expect(isSameSectorCompetitor('Lo que sea', 'unknown')).toBe(true);
+  });
+
+  // Ortopedia ya se bloquea antes, en isValidCompetitor (lista de no-competidores).
+  it('ortopedia se bloquea en isValidCompetitor', () => {
+    expect(isValidCompetitor({ name: 'Ortopedia Mayor', website: 'https://ortopediamayor.es' })).toBe(false);
   });
 });
 

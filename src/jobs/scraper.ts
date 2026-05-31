@@ -4,7 +4,8 @@ import {
   getRecentlyUsedQueries, recordQueryUsed, getScraperState, setScraperTier, markBurstDone, countReadyToSend,
 } from '../services/supabase.js';
 import { qualifyLead, qualifyLeadPreEnrich } from '../core/lead-filter.js';
-import { isValidCompetitor } from '../core/business-name.js';
+import { isValidCompetitor, isSameSectorCompetitor } from '../core/business-name.js';
+import { detectSector } from '../core/sector-detector.js';
 import { enrichLead } from '../services/lead-enricher.js';
 import { logger } from '../lib/logger.js';
 import { notifyError } from '../core/health-monitor.js';
@@ -76,10 +77,13 @@ export async function runScraperAuto(): Promise<void> {
         // isValidCompetitor descarta entidades públicas (ambulatorios, ayuntamientos),
         // directorios y franquicias: nombrarlas como competidor delataría que no se ha
         // mirado el negocio. Si no queda ninguno válido, el email usa el fallback genérico.
+        const querySector = detectSector(q).sector;
         const topCompetitors = places
           .filter(p => p.website && p.website.trim().length > 0)
           .map(p => ({ name: p.business_name, website: p.website as string }))
           .filter(isValidCompetitor)
+          // Mismo sector que la query (una ortopedia no compite con una óptica).
+          .filter(c => isSameSectorCompetitor(c.name, querySector))
           .slice(0, 3);
         let inserted = 0;
         for (const p of places) {
@@ -287,10 +291,12 @@ export async function runScraper(queries: string[]): Promise<void> {
     log.info({ queries }, 'starting scraper (manual mode)');
     for (const q of queries) {
       const places = await searchBusinesses(q, 50);
+      const querySector = detectSector(q).sector;
       const topCompetitors = places
         .filter(p => p.website && p.website.trim().length > 0)
         .map(p => ({ name: p.business_name, website: p.website as string }))
         .filter(isValidCompetitor)
+        .filter(c => isSameSectorCompetitor(c.name, querySector))
         .slice(0, 3);
       for (const p of places) {
         const competitorsForLead = topCompetitors

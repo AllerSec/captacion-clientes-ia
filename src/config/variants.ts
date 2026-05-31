@@ -18,7 +18,9 @@ import { logger } from '../lib/logger.js';
  *    - Predicción: +30-50% reply rate vs v1.
  *
  *  v3_proof:
- *    - Añade UNA línea de prueba social ("ya he hecho web a otro negocio similar de la zona").
+ *    - Añade UNA línea de prueba social ("ya he hecho web a otro negocio del mismo sector").
+ *      NUNCA digas "de tu zona" / "de la zona": el ejemplo de Unax (motosarretxe.com,
+ *      etc.) NO está en la ciudad del lead, y afirmarlo delata que es una plantilla.
  *    - Porque social proof es la palanca ausente más potente en el control.
  *    - Predicción: +50-100% reply rate vs v1.
  *    - Riesgo: si suena inventado, baja trust. Por eso es genérico, sin nombres.
@@ -50,12 +52,13 @@ Sin signos de exclamación. Sin "¿verdad?" ni coletillas.`,
     name: 'v3_proof',
     prompt_snippet: `VARIACIÓN ACTIVA — PROOF POINT SUTIL:
 Después de la observación del problema y antes de la oferta, añade UNA frase corta mencionando que ya has hecho esto para otro negocio similar de la zona.
-Ejemplos según categoría:
-- Clínica: "He montado web a otra clínica del País Vasco hace poco, sé el tipo de cosas que mueven la aguja."
-- Asesoría/despacho: "He montado web a otro despacho de la zona hace poco, sé qué genera confianza y qué no."
-- Inmobiliaria: "He montado web a otra inmobiliaria del norte hace poco, sé qué hace que entren más llamadas."
-- Reformas: "He montado web a otro negocio de reformas de la zona hace poco, sé qué tipo de cosas convierten."
-- Otros: "He montado web a otro negocio similar de la zona hace poco."
+Ejemplos según categoría (NUNCA afirmes que el ejemplo es "de la zona" / de una región
+concreta: el caso de Unax no está en la ciudad del lead y decirlo delata la plantilla):
+- Clínica: "He montado web a otra clínica hace poco, sé el tipo de cosas que mueven la aguja."
+- Asesoría/despacho: "He montado web a otro despacho hace poco, sé qué genera confianza y qué no."
+- Inmobiliaria: "He montado web a otra inmobiliaria hace poco, sé qué hace que entren más llamadas."
+- Reformas: "He montado web a otro negocio de reformas hace poco, sé qué tipo de cosas convierten."
+- Otros: "He montado web a otro negocio del mismo sector hace poco."
 NUNCA inventes nombres concretos de clientes. NUNCA pongas cifras inventadas ("subí ventas un X%").
 La frase va sola, sin "y" ni "además". Tono: comentario al margen, no presunción.`,
     // DESACTIVADA: la frase "He montado web a otr..." está en FORBIDDEN_PHRASES del validador

@@ -39,6 +39,12 @@ describe('qualifyLead — gates de reputación / contacto', () => {
     expect(qualifyLead({ ...base, business_name: 'Vital Dent Bilbao' }).qualified).toBe(false);
     expect(qualifyLead({ ...base, business_name: 'Quirónsalud' }).qualified).toBe(false);
   });
+
+  it('rejects junk corporate names (Proximidad Empresarial S L)', () => {
+    const r = qualifyLead({ ...base, business_name: 'Proximidad Empresarial S L' });
+    expect(r.qualified).toBe(false);
+    expect(r.reason).toBe('junk_name');
+  });
 });
 
 describe('qualifyLead — regla de web', () => {

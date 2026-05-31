@@ -1,3 +1,5 @@
+import { distinctiveToken } from './business-name.js';
+
 export interface ValidateInput {
   subject: string;
   body: string;
@@ -35,18 +37,29 @@ export function validateGeneratedEmail(input: ValidateInput): ValidateResult {
   const errors: string[] = [];
   const subj = input.subject.trim();
   const body = input.body;
-  const detailsMentionMobile = input.details.some(d => /móvil/i.test(d));
+  // "móvil" como palabra suelta (teléfono): regla anti "tu web no va en el móvil".
+  // \b...\b evita el falso positivo dentro de "automóvil(es)". \b funciona porque
+  // ó/l son \w; nos basta excluir el caso "autom-".
+  const MOBILE_RX = /(?<!auto)\bm[oó]vil(es)?\b/i;
+  const detailsMentionMobile = input.details.some(d => MOBILE_RX.test(d));
 
   if (subj.length === 0) errors.push('subject: vacío');
   // Asunto corto estilo interno (2-5 palabras). No debe parecer venta ni llevar precio.
   if (subj.split(/\s+/).length > 6) errors.push('subject: demasiado largo (máx ~5 palabras)');
   if (PRICE_RX.test(subj)) errors.push('subject: no debe contener precio');
+  // Minúsculas (internal-camouflage de la skill). El nombre del competidor se cuela
+  // capitalizado ("Talleres Duerna en google"); claude.ts ya fuerza toLowerCase, pero
+  // aquí marcamos si llegara un nombre propio COMPUESTO (2+ palabras Capitalizadas
+  // seguidas). No penalizamos una sola palabra capitalizada (una ciudad: "Donostia").
+  if (/[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+/.test(subj)) {
+    errors.push('subject: nombre propio sin minúsculas (debe ir todo en minúsculas)');
+  }
 
   for (const rx of FORBIDDEN_TECH) {
     if (rx.test(body)) errors.push(`body: afirmación técnica prohibida (${rx.source})`);
   }
   if (bodyMentionsHttpsAsWord(body)) errors.push('body: contiene "HTTPS" como palabra suelta');
-  if (/móvil/i.test(body) && !detailsMentionMobile) {
+  if (MOBILE_RX.test(body) && !detailsMentionMobile) {
     errors.push('body: contiene "móvil" pero details no lo justifica');
   }
 
@@ -60,10 +73,12 @@ export function validateGeneratedEmail(input: ValidateInput): ValidateResult {
     errors.push('body(email1): no debe llevar unaxaller.com (ese enlace va en el FU2)');
   }
 
-  // Debe empezar con el saludo, sin líneas inventadas antes.
+  // Debe empezar con el saludo en tú singular, sin líneas inventadas antes.
+  // Dos formas válidas: "Hola, Ángel:" (nombre de persona) o "Hola:" a secas
+  // (cuando el negocio es razón social y meter el nombre sonaría a plantilla).
   const trimmedBody = body.trimStart();
-  if (!/^<p[^>]*>Hola, equipo de /i.test(trimmedBody)) {
-    errors.push('body: debe empezar con "<p>Hola, equipo de ..." (sin líneas extra antes)');
+  if (!/^<p[^>]*>Hola(,\s.+?)?:/i.test(trimmedBody)) {
+    errors.push('body: debe empezar con "<p>Hola:" o "<p>Hola, NOMBRE:" (sin líneas extra antes)');
   }
 
   // Frases inventadas conocidas que Claude tiende a meter.
@@ -85,10 +100,15 @@ export function validateGeneratedEmail(input: ValidateInput): ValidateResult {
     }
   }
 
-  // Y DEBE nombrar al competidor real.
+  // Y DEBE nombrar al competidor real. Match flexible: vale el nombre completo
+  // O su token distintivo (p.ej. "Taller GTS motor" → "gts"), porque Claude
+  // acorta los nombres de forma natural ("GTS Motor") y eso sigue siendo válido.
   if (input.requiredCompetitorName) {
-    const escaped = input.requiredCompetitorName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    if (!new RegExp(escaped, 'i').test(body)) {
+    const escapeRx = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const full = new RegExp(escapeRx(input.requiredCompetitorName), 'i');
+    const token = distinctiveToken(input.requiredCompetitorName);
+    const tokenRx = token ? new RegExp(`\\b${escapeRx(token)}\\b`, 'i') : null;
+    if (!full.test(body) && !(tokenRx && tokenRx.test(body))) {
       errors.push(`body: no menciona al competidor "${input.requiredCompetitorName}"`);
     }
   }
