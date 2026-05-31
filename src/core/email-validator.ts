@@ -116,6 +116,14 @@ const FORBIDDEN_FOLLOWUP_PHRASES = [
 
 const FOLLOWUP_MAX_WORDS = 90;
 
+// Palabras que disparan filtros de spam (la skill cold-email las marca como
+// "deliverability risk"). Prohibidas en cualquier cuerpo, también en el FU3.
+const SPAM_WORDS = [
+  /\bgarant[ií]a\b/i,
+  /\bgratis\b/i,
+  /te devuelvo el dinero/i,
+];
+
 function stripTags(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }

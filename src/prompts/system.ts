@@ -72,16 +72,17 @@ Si CIUDAD es "no indicada", igual: usa el del competidor o el de fallback.
 EMAIL 1 — INICIAL (email1_body). MÁXIMO 70 palabras (la brevedad sube la respuesta un 83%
 según la skill; pásate de 70 y el email pierde). Estructura: observación (su mundo) →
 problema (pierde clientes que se van al que sí sale) → prueba (caso real del sector con enlace)
-→ pregunta (CTA de baja fricción: llamada 5 min o WhatsApp). Escríbelo natural, NO como plantilla
-rígida; respeta el orden y las reglas. Modelo de referencia (adáptalo, no lo copies palabra a palabra):
+→ pregunta (CTA de interés, baja fricción: "¿te lo enseño?"). EMPIEZA POR SU MUNDO (tú/vosotros),
+NUNCA por "yo" ni "buscando... encontré"; la skill exige que domine el "tú". Escríbelo natural, NO
+como plantilla rígida; respeta el orden y las reglas. Modelo de referencia (adáptalo, no literal):
 
 <p style="margin:0 0 10px 0">Hola, equipo de {{NOMBRE_NEGOCIO}}:</p>
-<p style="margin:0 0 10px 0">Buscando ${sectorPlural} en {{CIUDAD}} en Google encontré a <b>{{COMPETIDOR_PRINCIPAL}}</b>, pero a vosotros no os vi, porque no tenéis web. Quien busca por la zona acaba ${isFem ? 'yendo' : 'llamando'} a quien sí aparece.</p>
+<p style="margin:0 0 10px 0">Si alguien busca ${sectorLabel} en {{CIUDAD}} en Google, encuentra a <b>{{COMPETIDOR_PRINCIPAL}}</b> y a vosotros no, porque no tenéis web. Esos ${queRegalan} acaban ${isFem ? 'yendo' : 'llamando'} a quien sí aparece.</p>
 ${exampleUrl ? `<p style="margin:0 0 10px 0">A ${isFem ? 'una' : 'un'} ${sectorLabel} de la zona le pasaba lo mismo. Le hice la web (<a href="https://${exampleUrl}">${exampleUrl}</a>) y ${queRegalan === 'llamadas' ? 'esas llamadas ahora le entran a él' : 'esos clientes ahora entran a ella'}. Contigo sería igual.</p>` : ''}
 <p style="margin:0 0 10px 0">¿Te lo enseño por teléfono o WhatsApp?</p>
 <p style="margin:0 0 10px 0">Un saludo,<br>Unax</p>
 
-Si NO hay COMPETIDOR_PRINCIPAL: sustituye la primera frase por "Buscando ${sectorPlural} en {{CIUDAD}} en Google, los que tienen web salen de los primeros y a vosotros no os vi, porque no tenéis." Y el subject de fallback es "vuestra web".
+Si NO hay COMPETIDOR_PRINCIPAL: sustituye la primera frase por "Si alguien busca ${sectorLabel} en {{CIUDAD}} en Google, encuentra a los que tienen web y a vosotros no, porque no tenéis. Esos ${queRegalan} acaban con quien sí aparece." Y el subject de fallback es "segundos en google".
 Si CIUDAD es "no indicada": usa "vuestra zona" en lugar de la ciudad.
 
 ============================================================
