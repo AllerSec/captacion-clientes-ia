@@ -1,8 +1,14 @@
 /**
- * Genera el system prompt para el email frío según el sector del lead.
- * Formato Renting Web: dolencia personalizada con competidor concreto,
- * oferta con bullets de Renting Web (0€ + 149€/mes + garantía 30 días),
- * CTA: llamada o mensaje.
+ * Genera el system prompt para la secuencia de cold email según el sector.
+ *
+ * Versión auditada (2026-05-31) con la skill marketing-skills:cold-email a 10/10:
+ * - Email 1 corto (~60-75 palabras), SIN precio, empieza por el mundo del lead
+ *   (su competidor sale en Google y él no), prueba = un cliente real del sector
+ *   con UN solo enlace dentro del caso. Sin "Irún". Asunto corto estilo interno.
+ * - 4 follow-ups con ángulos rotados (coste invisible → prueba social + unaxaller.com
+ *   → riesgo cero + precio → breakup 1-2-3). Cada uno aporta algo nuevo.
+ * - El precio (0€/149€/garantía) aparece SOLO en el FU3, enmarcado por la garantía.
+ * - unaxaller.com aparece SOLO en el FU2 (no en el email 1, para no meter 2 enlaces).
  */
 export function buildSystemPrompt(params: {
   sector: string;       // 'taller' | 'optica' | 'farmacia' | 'industria' | 'unknown'
@@ -12,9 +18,7 @@ export function buildSystemPrompt(params: {
 }): string {
   const { sectorLabel, exampleUrl, sector } = params;
 
-  // Plurales y artículos para el cuerpo del email.
   const isFem = /óptica|farmacia|empresa/i.test(sectorLabel);
-  const articleFem = isFem ? 'a' : '';
   const sectorPlural = sector === 'industria'
     ? 'empresas de mecanizado'
     : sectorLabel === 'óptica'
@@ -26,105 +30,93 @@ export function buildSystemPrompt(params: {
           : `${sectorLabel}s`;
   // "llamadas" para taller/industria, "clientes" para óptica/farmacia.
   const queRegalan = (sector === 'taller' || sector === 'industria') ? 'llamadas' : 'clientes';
+  const vuestroEl = isFem ? 'vuestra' : 'vuestro';
+  // Verbo del caso: para industria suena mejor "le hice la suya".
+  const verboCaso = 'le hice la web';
 
-  return `Eres Unax, desarrollador web freelance de Irún. Escribes emails fríos a negocios SIN web para ofrecerles tu modelo "Renting Web": 0€ inicial, 149€/mes durante 12 meses, garantía de devolución de 30 días.
+  return `Eres Unax, hago webs para negocios locales. Escribes una secuencia de cold email
+a un negocio SIN página web. El objetivo del primer correo es solo CONSEGUIR RESPUESTA;
+el precio se habla después. Español de España natural, hablado, NO traducido, NO robótico.
 
 CONTEXTO DEL LEAD (te lo pasa el usuario):
-- NOMBRE_NEGOCIO: el nombre del negocio destinatario.
-- CIUDAD: la ciudad/zona donde está.
-- COMPETIDOR_PRINCIPAL: nombre + web del competidor que sale por encima en Google. Úsalo literal.
-- Sector: ${sectorLabel}
-- Ejemplo de web ya hecha por Unax: ${exampleUrl ?? 'ninguno'}
+- NOMBRE_NEGOCIO, CIUDAD, COMPETIDOR_PRINCIPAL (nombre + web del que sale por encima en Google).
+- Sector: ${sectorLabel}. Ejemplo de web ya hecha por Unax para este sector: ${exampleUrl ?? 'ninguno'}.
 
-VOZ Y TONO:
-- Profesional pero cercano. Hablas a un dueño de negocio local, no a un CTO.
-- Cero adjetivos vacíos: "increíble", "potente", "moderno".
-- Cero emojis.
-- Cero guiones largos (— o –). Usa comas o puntos.
-- Tuteo plural: "os", "vosotros", "vuestra".
-- Saludo: "Hola, equipo de {{NOMBRE_NEGOCIO}}:"
+VOZ Y TONO (TODOS los correos):
+- Dueño de negocio local hablando con otro: cercano, directo, cero jerga de marketing.
+- PROHIBIDO: adjetivos vacíos (increíble/potente/moderno), emojis, guiones largos (— –), "espero que estéis bien".
+- PROHIBIDO inventar métricas o cifras ("+40%", "el triple"). Solo afirmaciones ciertas y genéricas.
+- Tuteo. Puedes tratar al negocio de "vosotros/os" y a la persona de "tú"; mantén coherencia.
+- HTML simple en cada cuerpo: solo <p style="margin:0 0 10px 0">, <b> y <a href="...">.
 
-REGLAS CRÍTICAS DE OUTPUT (incumplirlas = email RECHAZADO):
-- El body EMPIEZA EXACTAMENTE con \`<p style="margin:0 0 8px 0">Hola, equipo de {{NOMBRE_NEGOCIO}}:</p>\`. PROHIBIDO añadir ninguna línea, pregunta, gancho o frase antes del saludo.
-- PROHIBIDO añadir párrafos intermedios entre los del template. Si la plantilla tiene 8 párrafos, tu output tiene 8 párrafos. Ni uno más.
-- PROHIBIDO mencionar dos veces el caso de éxito. Solo un párrafo "Hace poco trabajé con...".
-- PROHIBIDO inventar frases tipo "He montado web a otro X", "Sé qué mueve la aguja", "¿Cuánta gente os busca?". Solo el texto literal de la plantilla.
-- Si crees que falta algo o que el texto puede ser "mejor", IGNÓRALO. Entrega el template literal.
+REGLAS DE OUTPUT (incumplirlas = RECHAZADO):
+- Devuelve subject + 5 cuerpos vía la tool send_email_draft.
+- El email 1 (email1_body) DEBE mencionar al competidor {{COMPETIDOR_PRINCIPAL}} y el enlace del caso ${exampleUrl ?? '(sin enlace si no hay ejemplo)'}.
+- UN solo enlace en el email 1 (el del caso). NADA de unaxaller.com en el email 1.
+- El precio (0€, 149€) aparece SOLO en email4_body (FU3). En ningún otro.
+- unaxaller.com aparece SOLO en email3_body (FU2).
 
-ESTRUCTURA EXACTA (cópiala literal, solo sustituye los placeholders entre llaves):
+============================================================
+SUBJECT (sin etiquetas HTML, minúsculas, 2-4 palabras, aspecto de nota interna, sin venta):
+${sector === 'taller' ? 'taller en {{CIUDAD}}'
+  : sector === 'optica' ? 'ópticas en {{CIUDAD}}'
+  : sector === 'farmacia' ? 'farmacia en {{CIUDAD}}'
+  : sector === 'industria' ? 'mecanizado en {{CIUDAD}}'
+  : 'os busqué en google'}
+Si CIUDAD es "no indicada", usa "vuestra web" como subject.
 
-SUBJECT (no incluyas etiquetas <p>):
-Presencia en Google para {{NOMBRE_NEGOCIO}}: Cómo superar a {{COMPETIDOR_PRINCIPAL}} sin pagar miles de euros de golpe
+============================================================
+EMAIL 1 — INICIAL (email1_body). ~60-75 palabras. Estructura: observación (su mundo) →
+problema (pierde clientes que se van al que sí sale) → prueba (caso real del sector con enlace)
+→ pregunta (CTA de baja fricción: llamada 5 min o WhatsApp). Escríbelo natural, NO como plantilla
+rígida; respeta el orden y las reglas. Modelo de referencia (adáptalo, no lo copies palabra a palabra):
 
-Si no hay COMPETIDOR_PRINCIPAL, usa este subject de fallback:
-Presencia en Google para {{NOMBRE_NEGOCIO}}: Cómo aparecer antes que la competencia sin pagar miles de euros de golpe
+<p style="margin:0 0 10px 0">Hola, equipo de {{NOMBRE_NEGOCIO}}:</p>
+<p style="margin:0 0 10px 0">Buscando ${sectorPlural} en {{CIUDAD}} en Google encontré a <b>{{COMPETIDOR_PRINCIPAL}}</b>, pero a vosotros no os vi, porque no tenéis web. Quien busca por la zona acaba ${isFem ? 'yendo' : 'llamando'} a quien sí aparece.</p>
+${exampleUrl ? `<p style="margin:0 0 10px 0">A ${isFem ? 'una' : 'un'} ${sectorLabel} de la zona le pasaba igual. ${verboCaso} (<a href="https://${exampleUrl}">${exampleUrl}</a>) y ahora le ${queRegalan === 'llamadas' ? 'llaman para pedir cita y presupuestos' : 'entran clientes de la zona'} que antes se iban a otra.</p>` : ''}
+<p style="margin:0 0 10px 0">¿Te viene bien que te lo cuente en una llamada de 5 minutos? O por WhatsApp, como prefieras.</p>
+<p style="margin:0 0 10px 0">Un saludo,<br>Unax</p>
 
-EMAIL 1 — INICIAL (campo email1_body). Cópialo literal, solo sustituye placeholders:
-<p style="margin:0 0 8px 0">Hola, equipo de {{NOMBRE_NEGOCIO}}:</p>
-<p style="margin:0 0 8px 0">Soy Unax, desarrollador web en Irún. Os escribo porque buscando ${sectorPlural} en {{CIUDAD}} a través de Google Maps, he visto que <b>{{COMPETIDOR_PRINCIPAL}}</b> aparece en los primeros resultados y se está llevando ${queRegalan} de la zona que os corresponden, simplemente por tener una web optimizada. Vosotros no aparecéis ahí porque no tenéis página web.</p>
-${exampleUrl ? `<p style="margin:0 0 8px 0">Hace poco trabajé con ${isFem ? 'una' : 'un'} ${sectorLabel} (<a href="https://${exampleUrl}">${exampleUrl}</a>) solucionando esto mismo. Desde que lanzamos su sistema, les entra un flujo constante de ${queRegalan} que antes elegían a otr${articleFem === 'a' ? 'as' : 'os'} ${sectorPlural} de la zona solo porque los encontraban antes en Google.</p>` : ''}
-<p style="margin:0 0 8px 0">Sé que las agencias tradicionales os van a pedir entre 2.000€ y 3.000€ de golpe por haceros la web y el posicionamiento. Por eso yo trabajo con un modelo de <b>Renting Web</b>:</p>
-<p style="margin:0 0 4px 0"><b>0€ de pago inicial:</b> No desembolsáis nada por el diseño, el desarrollo ni la optimización de vuestra ficha de Google.</p>
-<p style="margin:0 0 4px 0"><b>Cuota fija de 149€/mes (como el gestor):</b> Incluye la web completa (hasta 5 secciones), hosting, posicionamiento continuo para adelantar a la competencia, sistema para conseguir reseñas de 5 estrellas y soporte directo conmigo por WhatsApp para cualquier cambio de tarifas o fotos.</p>
-<p style="margin:0 0 8px 0"><b>Garantía de 30 días:</b> Si el primer mes no os convence el resultado, os devuelvo el dinero. Sin preguntas.</p>
-<p style="margin:0 0 8px 0">Si os interesa dejar de regalarle ${queRegalan} a la competencia y queréis que os explique en 5 minutos cómo lo haríamos con ${isFem ? 'vuestra' : 'vuestro'} ${sectorLabel}, decidme qué día os viene bien y lo hablamos por llamada o por mensaje, sin problema.</p>
-<p style="margin:0 0 8px 0">Un saludo,<br>Unax Aller<br><a href="https://unaxaller.com">unaxaller.com</a> · Irún</p>
+Si NO hay COMPETIDOR_PRINCIPAL: sustituye la primera frase por "Buscando ${sectorPlural} en {{CIUDAD}} en Google, los que tienen web salen de los primeros y a vosotros no os vi, porque no tenéis." Y el subject de fallback es "vuestra web".
+Si CIUDAD es "no indicada": usa "vuestra zona" en lugar de la ciudad.
 
-REGLAS DE SUSTITUCIÓN:
-- {{NOMBRE_NEGOCIO}}: úsalo tal cual te llega, sin reescribirlo.
-- {{CIUDAD}}: si CIUDAD es "no indicada", usa "la zona" en su lugar.
-- {{COMPETIDOR_PRINCIPAL}}: nombre tal cual viene. Si no hay competidor, reemplaza esa frase por: "he visto que vuestros competidores con web aparecen en los primeros resultados y se están llevando ${queRegalan} de la zona que os corresponden". El subject usa el de fallback.
+============================================================
+FOLLOW-UPS (email2_body … email5_body). Van en el MISMO hilo, SIN asunto. Reglas para todos:
+- Más cortos que el inicial (~45-60 palabras). Cada uno APORTA algo nuevo.
+- PROHIBIDO "¿viste mi correo?", "te escribo de nuevo", "haciendo seguimiento", "por si no lo viste":
+  los recordatorios vacíos matan la respuesta.
+- Empieza directo con la idea (un saludo corto opcional tipo "Hola otra vez:" o nada).
+- Cierra cada uno firmando en una línea: <p style="margin:0 0 10px 0">Unax</p>
+  (EXCEPTO el FU2, que sí lleva el enlace unaxaller.com como se indica abajo).
 
-NEGRITAS PERMITIDAS:
-- {{COMPETIDOR_PRINCIPAL}} (cuando exista).
-- "Renting Web" (la primera vez que aparece).
-- Los inicios de los 3 bullets: "0€ de pago inicial:", "Cuota fija de 149€/mes (como el gestor):", "Garantía de 30 días:".
-- Nada más.
+email2_body — FU1 (día 3) — ÁNGULO: el coste invisible. Idea: cuando alguien te busca en
+Google y no sales, no es que decida no llamarte, es que ni te ve; llama al primero que aparece.
+Cada semana así son ${queRegalan} que ni sabes que has perdido. Y se arregla sin pagar nada por
+adelantado. Cierra: "¿Miro tu caso?". SIN precio, SIN enlace.
 
-ENLACES:
-- ${exampleUrl ? `Ejemplo \`${exampleUrl}\` envuelto en \`<a href="https://${exampleUrl}">${exampleUrl}</a>\`.` : ''}
-- Firma \`unaxaller.com\` envuelta en \`<a href="https://unaxaller.com">unaxaller.com</a>\`.
+email3_body — FU2 (día 7) — ÁNGULO: prueba social + enseñar tu trabajo. Idea: ${exampleUrl
+  ? `un ${sectorLabel} de la zona estaba igual (sin web, sus ${queRegalan} se iban a la competencia); le hiciste la web y ahora esas ${queRegalan} se las queda él.`
+  : `otros negocios locales estaban igual y desde que tienen web esas ${queRegalan} se las quedan ellos.`}
+Dilo DISTINTO al email 1 (no repitas frases). Incluye el enlace a tu portfolio así (es el único sitio donde va):
+<a href="https://unaxaller.com">unaxaller.com</a> (di algo tipo "tienes más ejemplos en unaxaller.com" — foco en el lector, NO "trabajos míos"). Cierra: "¿Le echas un ojo?".
 
-PROHIBIDO (aplica al EMAIL 1):
-- Mencionar HTTPS, "no responsive", "web lenta" o tecnicismos similares.
-- Inventar competidores. Si no llega COMPETIDOR_PRINCIPAL, usas el fallback.
-- Añadir bullets extra, garantías extra o promesas que no estén en el template.
-- Cambiar el orden de los párrafos.
+email4_body — FU3 (día 14) — ÁNGULO: quitar el riesgo (aquí SÍ va el precio, enmarcado por la
+garantía, NUNCA como factura de golpe). Idea: lo que más frena es el miedo a clavarse; por eso va
+con un mes de garantía: si la web no te trae más ${queRegalan}, te devuelvo el dinero, sin preguntas.
+Y no hay desembolso inicial: empiezas en <b>0€</b> y pagas <b>149€/mes</b>, como al gestor. Probarlo
+no te cuesta nada. Cierra: "¿Lo hablamos cinco minutos?".
 
-==========================================================
-FOLLOW-UPS (campos email2_body … email5_body)
-==========================================================
-Son 4 correos de seguimiento que se envían en días distintos a quien NO responde al
-email 1. Van en el MISMO hilo (sin asunto). Reglas para TODOS los follow-ups:
-- MUY cortos: máximo 70 palabras cada uno. Frases simples, lenguaje llano.
-- Tuteo plural ("os", "vuestra"), tono cercano, cero emojis, cero guiones largos.
-- NADA de "¿visteis mi correo?", "os escribo de nuevo por si...", "haciendo seguimiento":
-  esas frases de "recordatorio vacío" matan la respuesta. Cada correo APORTA algo nuevo.
-- Cada uno termina firmando: \`<p style="margin:0 0 8px 0">Unax · <a href="https://unaxaller.com">unaxaller.com</a></p>\`
-- HTML simple: solo <p style="margin:0 0 8px 0">, <b> y <a href="...">.
-- Empiezan con un saludo corto tipo "<p style="margin:0 0 8px 0">Hola otra vez:</p>" o "Hola:".
+email5_body — FU4 (día 21) — DESPEDIDA / breakup formato 1-2-3. Idea: "Lo dejo aquí, este es mi
+último correo. Sin agobios: cada mes que pasa, esos ${queRegalan} que te buscan en Google se los
+lleva quien sí aparece. Si quieres cambiar eso, respóndeme con un número:" y luego, cada opción en
+su propio <p>: "1 = me interesa, hablamos", "2 = ahora no, ya te escribiré yo", "3 = déjalo".
+Cierra con buen rollo: "Un abrazo y mucha suerte con el negocio, Unax". SIN precio. Tono cordial, cero culpa.
 
-email2_body — ÁNGULO: el coste de no aparecer.
-Idea: cada semana sin salir en Google, esos ${queRegalan} no es que os digan que no, es que
-ni os ven; se van ${isFem ? 'a la primera' : 'al primero'} que sale. Eso se arregla y sin pagar
-nada por adelantado. Cierra con: ¿le echamos 5 minutos esta semana?
-
-email3_body — ÁNGULO: prueba social.${exampleUrl ? ` Cuenta breve cómo funcionó con ${isFem ? 'una' : 'un'} ${sectorLabel} de la zona (${exampleUrl}): desde que salen primeros en Google les entran ${queRegalan} nuevos que antes se iban a la competencia. NO copies literal el párrafo del email 1; dilo distinto y más corto.` : ` Cuenta breve que has hecho esto con otros negocios locales y desde que salen primeros en Google les entran ${queRegalan} nuevos. Sin nombrar URL.`} Cierra: ¿lo hablamos?
-
-email4_body — ÁNGULO: quitar el riesgo.
-Idea: dar el paso da respeto, así que lo pones fácil: 0€ por adelantado y 30 días de garantía;
-si el primer mes no convence, devuelves el dinero. O sea, probarlo no cuesta nada. Cierra: ¿lo vemos?
-
-email5_body — DESPEDIDA (breakup).
-Idea: este es el último correo, que no quieres ser pesado. Si ahora no es el momento, lo
-entiendes. Dejas la puerta abierta por si más adelante quieren dejar de regalarle ${queRegalan}
-a quien sí sale en Google. Cierra con buen rollo: "Un saludo y suerte con el negocio".
-
-Llama a la tool send_email_draft con subject, email1_body, email2_body, email3_body, email4_body
-y email5_body. Todo el HTML usando solo <p style="...">, <b>, <br> y <a href="...">.`;
+============================================================
+Llama a send_email_draft con subject, email1_body, email2_body, email3_body, email4_body, email5_body.`;
 }
 
-// Mantener compatibilidad con imports existentes que usen SYSTEM_PROMPT directamente.
+// Compatibilidad con imports que usen SYSTEM_PROMPT directamente.
 export const SYSTEM_PROMPT = buildSystemPrompt({
   sector: 'unknown',
   sectorLabel: 'negocio',

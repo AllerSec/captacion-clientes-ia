@@ -34,12 +34,20 @@ vi.mock('../../src/lib/logger.js', () => ({
 }));
 vi.mock('../../src/core/health-monitor.js', () => ({ notifyError: vi.fn() }));
 
-const validSubject = 'Presencia en Google para Taller X: Cómo superar a Taller Juanjo sin pagar miles de euros de golpe';
-const validBody = `<p style="margin:0 0 8px 0">Hola, equipo de Taller X:</p><p style="margin:0 0 8px 0">Soy Unax, desarrollador web en Irún. Os escribo porque buscando talleres en Bilbao a través de Google Maps, he visto que <b>Taller Juanjo</b> aparece en los primeros resultados y se está llevando llamadas de la zona que os corresponden, simplemente por tener una web optimizada. Vosotros no aparecéis ahí porque no tenéis página web.</p><p style="margin:0 0 8px 0">Hace poco trabajé con un taller (<a href="https://motosarretxe.com">motosarretxe.com</a>) solucionando esto mismo. Desde que lanzamos su sistema, les entra un flujo constante de llamadas que antes elegían a otros talleres de la zona solo porque los encontraban antes en Google.</p><p style="margin:0 0 8px 0">Sé que las agencias tradicionales os van a pedir entre 2.000€ y 3.000€ de golpe por haceros la web y el posicionamiento. Por eso yo trabajo con un modelo de <b>Renting Web</b>:</p><p style="margin:0 0 4px 0"><b>0€ de pago inicial:</b> No desembolsáis nada por el diseño, el desarrollo ni la optimización de vuestra ficha de Google.</p><p style="margin:0 0 4px 0"><b>Cuota fija de 149€/mes (como el gestor):</b> Incluye la web completa (hasta 5 secciones), hosting, posicionamiento continuo, sistema para conseguir reseñas y soporte por WhatsApp.</p><p style="margin:0 0 8px 0"><b>Garantía de 30 días:</b> Si el primer mes no os convence, os devuelvo el dinero. Sin preguntas.</p><p style="margin:0 0 8px 0">Si os interesa y queréis que os explique en 5 minutos por teléfono cómo lo haríamos, decidme qué día os viene bien que os llame.</p><p style="margin:0 0 8px 0">Un saludo,<br>Unax Aller<br><a href="https://unaxaller.com">unaxaller.com</a> · Irún</p>`;
+// Secuencia válida en el NUEVO diseño (2026-05-31): email1 SIN precio, con
+// competidor + enlace del caso; precio SOLO en FU3; unaxaller.com en FU2.
+const validSubject = 'taller en Bilbao';
+const validBody = `<p style="margin:0 0 10px 0">Hola, equipo de Taller X:</p>`
+  + `<p style="margin:0 0 10px 0">Buscando talleres en Bilbao en Google encontré a <b>Taller Juanjo</b>, pero a vosotros no os vi, porque no tenéis web. Quien busca por la zona acaba llamando a quien sí aparece.</p>`
+  + `<p style="margin:0 0 10px 0">A un taller de la zona le pasaba igual. Le hice la web (<a href="https://motosarretxe.com">motosarretxe.com</a>) y ahora le llaman para pedir cita y presupuestos que antes se iban a otra.</p>`
+  + `<p style="margin:0 0 10px 0">¿Te viene bien que te lo cuente en una llamada de 5 minutos? O por WhatsApp, como prefieras.</p>`
+  + `<p style="margin:0 0 10px 0">Un saludo,<br>Unax</p>`;
 
-// Follow-up corto y válido: firma unaxaller.com, sin frases prohibidas, <90 palabras.
-const fu = (n: number) => `<p style="margin:0 0 8px 0">Hola:</p><p style="margin:0 0 8px 0">Apunte ${n}: sin web, esos clientes se van al que sale primero en Google. Se arregla sin pagar nada por adelantado. ¿Lo vemos?</p><p style="margin:0 0 8px 0">Unax · <a href="https://unaxaller.com">unaxaller.com</a></p>`;
-const validBodies = [validBody, fu(1), fu(2), fu(3), fu(4)];
+const fu1 = `<p style="margin:0 0 10px 0">Cuando alguien te busca en Google y no sales, ni te ve. Llama al primero que aparece. ¿Miro tu caso?</p><p style="margin:0 0 10px 0">Unax</p>`;
+const fu2 = `<p style="margin:0 0 10px 0">Un taller estaba igual; ahora se las queda él. Tienes su web y más en <a href="https://unaxaller.com">unaxaller.com</a>. ¿Le echas un ojo?</p>`;
+const fu3 = `<p style="margin:0 0 10px 0">Va con un mes de garantía: si no te trae más llamadas, te devuelvo el dinero. Empiezas en <b>0€</b> y pagas <b>149€/mes</b>, como al gestor. ¿Lo hablamos cinco minutos?</p><p style="margin:0 0 10px 0">Unax</p>`;
+const fu4 = `<p style="margin:0 0 10px 0">Lo dejo aquí, último correo. 1 = me interesa, 2 = ahora no, 3 = déjalo. Un abrazo, Unax</p>`;
+const validBodies = [validBody, fu1, fu2, fu3, fu4];
 
 const leadRow = {
   id: 'L1', business_name: 'Taller X', email: 'a@b.com', rating: 4.7,

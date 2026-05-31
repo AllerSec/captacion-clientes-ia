@@ -1,166 +1,147 @@
 import { describe, it, expect } from 'vitest';
 import { validateGeneratedEmail, validateSequence } from '../../src/core/email-validator.js';
 
-const sig = `<p style="margin:0 0 8px 0">Un saludo,<br>Unax Aller<br><a href="https://unaxaller.com">unaxaller.com</a> · Irún</p>`;
-const cta = `<p style="margin:0 0 8px 0">Si os interesa y queréis que os explique, decidme qué día os va bien que os llame.</p>`;
-const bullets = `<p style="margin:0 0 4px 0"><b>0€ de pago inicial:</b> No desembolsáis nada.</p><p style="margin:0 0 4px 0"><b>Cuota fija de 149€/mes (como el gestor):</b> Incluye la web, hosting, posicionamiento, reseñas y soporte WhatsApp.</p><p style="margin:0 0 8px 0"><b>Garantía de 30 días:</b> Si no os convence, os devuelvo el dinero.</p>`;
-const intro = `<p style="margin:0 0 8px 0">Hola, equipo de Taller X:</p><p style="margin:0 0 8px 0">Soy Unax, desarrollador web en Irún. Buscando talleres en Bilbao he visto que <b>Taller Juanjo</b> aparece por encima.</p>`;
-const offerLead = `<p style="margin:0 0 8px 0">Las agencias os piden 2.000€ de golpe. Yo trabajo con <b>Renting Web</b>:</p>`;
-const wholeBody = () => `${intro}${offerLead}${bullets}${cta}${sig}`;
-const validSubject = 'Presencia en Google para Taller X: Cómo superar a Taller Juanjo sin pagar miles de euros de golpe';
+// Email 1 válido en el NUEVO diseño (2026-05-31): SIN precio, empieza con el saludo,
+// nombra al competidor, lleva el enlace del caso, NO lleva unaxaller.com (va en el FU2).
+const validInitial = [
+  '<p style="margin:0 0 10px 0">Hola, equipo de Taller X:</p>',
+  '<p style="margin:0 0 10px 0">Buscando talleres en Donostia en Google encontré a <b>Competidor SL</b> de los primeros, pero a vosotros no os vi por ningún lado, porque no tenéis web.</p>',
+  '<p style="margin:0 0 10px 0">A un taller de la zona le pasaba igual. Le hice la web (<a href="https://motosarretxe.com">motosarretxe.com</a>) y ahora le entran visitas y llamadas.</p>',
+  '<p style="margin:0 0 10px 0">¿Te viene bien que te lo cuente en una llamada de 5 minutos? O por WhatsApp, como prefieras.</p>',
+  '<p style="margin:0 0 10px 0">Un saludo,<br>Unax</p>',
+].join('\n');
 
-describe('validateGeneratedEmail', () => {
-  it('passes a clean Renting Web email', () => {
+const validSubject = 'taller en Donostia';
+
+const fu1 = '<p style="margin:0 0 10px 0">Cuando alguien te busca en Google y no sales, ni te ve. Llama al primero que aparece. ¿Miro tu caso?</p><p style="margin:0 0 10px 0">Unax</p>';
+const fu2 = '<p style="margin:0 0 10px 0">Un taller de la zona estaba igual; ahora esas llamadas se las queda él. Tienes su web y más en <a href="https://unaxaller.com">unaxaller.com</a>. ¿Le echas un ojo?</p>';
+const fu3 = '<p style="margin:0 0 10px 0">Va con un mes de garantía: si no te trae más llamadas, te devuelvo el dinero. Empiezas en <b>0€</b> y pagas <b>149€/mes</b>, como al gestor. ¿Lo hablamos cinco minutos?</p><p style="margin:0 0 10px 0">Unax</p>';
+const fu4 = '<p style="margin:0 0 10px 0">Lo dejo aquí, este es mi último correo. Respóndeme con un número:</p><p style="margin:0 0 10px 0">1 = me interesa<br>2 = ahora no<br>3 = déjalo</p><p style="margin:0 0 10px 0">Un abrazo, Unax</p>';
+
+const validSequence = {
+  subject: validSubject,
+  bodies: [validInitial, fu1, fu2, fu3, fu4],
+  scenario: 'no_web' as const,
+  requiredExampleUrl: 'motosarretxe.com',
+  requiredCompetitorName: 'Competidor SL',
+};
+
+describe('validateGeneratedEmail (email 1)', () => {
+  it('acepta un email inicial válido (sin precio, con caso y competidor)', () => {
     const r = validateGeneratedEmail({
-      subject: validSubject,
-      body: wholeBody(),
-      scenario: 'no_web',
-      details: [],
+      subject: validSubject, body: validInitial, scenario: 'no_web', details: [],
+      requiredExampleUrl: 'motosarretxe.com', requiredCompetitorName: 'Competidor SL',
     });
     expect(r.ok).toBe(true);
   });
 
-  it('fails when subject does not contain "Presencia en Google"', () => {
-    const r = validateGeneratedEmail({
-      subject: 'vuestra web',
-      body: wholeBody(),
-      scenario: 'no_web',
-      details: [],
-    });
+  it('rechaza precio en el email 1 (debe ir en el FU3)', () => {
+    const withPrice = validInitial.replace('no tenéis web.', 'no tenéis web. Son 149€/mes.');
+    const r = validateGeneratedEmail({ subject: validSubject, body: withPrice, scenario: 'no_web', details: [] });
     expect(r.ok).toBe(false);
-    if (r.ok) return;
-    expect(r.errors.join(' ')).toMatch(/presencia en google/i);
+    if (!r.ok) expect(r.errors.some((e) => /precio/i.test(e))).toBe(true);
   });
 
-  it('fails when subject contains "móvil"', () => {
-    const r = validateGeneratedEmail({
-      subject: 'Presencia en Google web móvil',
-      body: wholeBody(),
-      scenario: 'no_web',
-      details: [],
-    });
+  it('rechaza unaxaller.com en el email 1 (va en el FU2)', () => {
+    const withSig = validInitial.replace('<br>Unax</p>', '<br>Unax · <a href="https://unaxaller.com">unaxaller.com</a></p>');
+    const r = validateGeneratedEmail({ subject: validSubject, body: withSig, scenario: 'no_web', details: [] });
     expect(r.ok).toBe(false);
-    if (r.ok) return;
-    expect(r.errors.join(' ')).toMatch(/subject.*móvil/i);
+    if (!r.ok) expect(r.errors.some((e) => /unaxaller/i.test(e))).toBe(true);
   });
 
-  it('fails when body claims "no HTTPS"', () => {
-    const r = validateGeneratedEmail({
-      subject: validSubject,
-      body: `${intro}<p>Vi que no tenéis HTTPS.</p>${offerLead}${bullets}${cta}${sig}`,
-      scenario: 'no_web',
-      details: [],
-    });
+  it('rechaza asunto con precio', () => {
+    const r = validateGeneratedEmail({ subject: 'web por 149€', body: validInitial, scenario: 'no_web', details: [] });
     expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errors.some((e) => /subject.*precio/i.test(e))).toBe(true);
   });
 
-  it('fails when 0€ bullet is missing', () => {
-    const wrongBullets = bullets.replace('<b>0€ de pago inicial:</b>', '0€ de pago inicial:');
+  it('rechaza asunto demasiado largo', () => {
     const r = validateGeneratedEmail({
-      subject: validSubject,
-      body: `${intro}${offerLead}${wrongBullets}${cta}${sig}`,
-      scenario: 'no_web',
-      details: [],
+      subject: 'presencia en google para superar a la competencia local ya',
+      body: validInitial, scenario: 'no_web', details: [],
     });
     expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errors.some((e) => /largo/i.test(e))).toBe(true);
   });
 
-  it('fails when 149€/mes bullet is missing', () => {
-    const wrongBullets = bullets.replace(/<b>Cuota fija de 149€\/mes[^<]*<\/b>/, '');
+  it('rechaza frase inventada conocida', () => {
+    const bad = validInitial.replace('porque no tenéis web.', 'porque no tenéis web. ¿Cuánta gente os busca?');
+    const r = validateGeneratedEmail({ subject: validSubject, body: bad, scenario: 'no_web', details: [] });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errors.some((e) => /inventada/i.test(e))).toBe(true);
+  });
+
+  it('rechaza HTTPS como palabra suelta', () => {
+    const bad = validInitial.replace('no tenéis web', 'no tenéis HTTPS');
+    const r = validateGeneratedEmail({ subject: validSubject, body: bad, scenario: 'no_web', details: [] });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errors.some((e) => /HTTPS/i.test(e))).toBe(true);
+  });
+
+  it('rechaza si no menciona al competidor requerido', () => {
+    const noComp = validInitial.replace('<b>Competidor SL</b>', 'los primeros');
     const r = validateGeneratedEmail({
-      subject: validSubject,
-      body: `${intro}${offerLead}${wrongBullets}${cta}${sig}`,
-      scenario: 'no_web',
-      details: [],
+      subject: validSubject, body: noComp, scenario: 'no_web', details: [],
+      requiredCompetitorName: 'Competidor SL',
     });
     expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errors.some((e) => /competidor/i.test(e))).toBe(true);
   });
 
-  it('fails when garantía bullet is missing', () => {
-    const wrongBullets = bullets.replace('<b>Garantía de 30 días:</b>', 'Garantía de 30 días:');
+  it('rechaza si no menciona la URL del caso', () => {
+    const noUrl = validInitial.replace('<a href="https://motosarretxe.com">motosarretxe.com</a>', 'una web');
     const r = validateGeneratedEmail({
-      subject: validSubject,
-      body: `${intro}${offerLead}${wrongBullets}${cta}${sig}`,
-      scenario: 'no_web',
-      details: [],
+      subject: validSubject, body: noUrl, scenario: 'no_web', details: [],
+      requiredExampleUrl: 'motosarretxe.com',
     });
     expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errors.some((e) => /URL de ejemplo/i.test(e))).toBe(true);
   });
 
-  it('fails when signature missing', () => {
-    const r = validateGeneratedEmail({
-      subject: validSubject,
-      body: `${intro}${offerLead}${bullets}${cta}`,
-      scenario: 'no_web',
-      details: [],
-    });
+  it('rechaza body que no empieza con el saludo', () => {
+    const bad = '<p>¿Sabías algo?</p>' + validInitial;
+    const r = validateGeneratedEmail({ subject: validSubject, body: bad, scenario: 'no_web', details: [] });
     expect(r.ok).toBe(false);
-  });
-
-  it('fails when requiredCompetitorName is set but body omits it', () => {
-    const bodyNoCompetitor = wholeBody().replace(/Taller Juanjo/g, 'otro');
-    const r = validateGeneratedEmail({
-      subject: validSubject,
-      body: bodyNoCompetitor,
-      scenario: 'no_web',
-      details: [],
-      requiredCompetitorName: 'Taller Juanjo',
-    });
-    expect(r.ok).toBe(false);
-    if (r.ok) return;
-    expect(r.errors.join(' ')).toMatch(/competidor/i);
-  });
-
-  it('passes when requiredCompetitorName matches', () => {
-    const r = validateGeneratedEmail({
-      subject: validSubject,
-      body: wholeBody(),
-      scenario: 'no_web',
-      details: [],
-      requiredCompetitorName: 'Taller Juanjo',
-    });
-    expect(r.ok).toBe(true);
+    if (!r.ok) expect(r.errors.some((e) => /empezar con/i.test(e))).toBe(true);
   });
 });
 
 describe('validateSequence', () => {
-  const fu = (n: number) => `<p style="margin:0 0 8px 0">Hola:</p><p style="margin:0 0 8px 0">Apunte ${n}: sin web os ven menos. Se arregla sin pagar nada. ¿Lo vemos?</p><p style="margin:0 0 8px 0">Unax · <a href="https://unaxaller.com">unaxaller.com</a></p>`;
-  const goodBodies = () => [wholeBody(), fu(1), fu(2), fu(3), fu(4)];
-
-  it('passes a clean 5-email sequence', () => {
-    const r = validateSequence({ subject: validSubject, bodies: goodBodies(), scenario: 'no_web' });
+  it('acepta una secuencia válida de 5 cuerpos', () => {
+    const r = validateSequence(validSequence);
     expect(r.ok).toBe(true);
   });
 
-  it('fails if there are not exactly 5 bodies', () => {
-    const r = validateSequence({ subject: validSubject, bodies: [wholeBody()], scenario: 'no_web' });
+  it('rechaza si no hay 5 cuerpos', () => {
+    const r = validateSequence({ ...validSequence, bodies: validSequence.bodies.slice(0, 3) });
     expect(r.ok).toBe(false);
   });
 
-  it('fails when a follow-up is missing the signature', () => {
-    const bodies = goodBodies();
-    bodies[2] = `<p style="margin:0 0 8px 0">Hola:</p><p>Sin firma aquí.</p>`;
-    const r = validateSequence({ subject: validSubject, bodies, scenario: 'no_web' });
+  it('rechaza recordatorio vacío en un follow-up', () => {
+    const badFu = '<p style="margin:0 0 10px 0">Hola otra vez, ¿visteis mi correo? Un saludo.</p><p>Unax</p>';
+    const r = validateSequence({ ...validSequence, bodies: [validInitial, badFu, fu2, fu3, fu4] });
     expect(r.ok).toBe(false);
-    if (r.ok) return;
-    expect(r.errors.join(' ')).toMatch(/email3.*firma/i);
+    if (!r.ok) expect(r.errors.some((e) => /recordatorio vacío/i.test(e))).toBe(true);
   });
 
-  it('fails when a follow-up uses an empty-reminder phrase', () => {
-    const bodies = goodBodies();
-    bodies[1] = `<p style="margin:0 0 8px 0">Hola:</p><p>¿Visteis mi correo de la semana pasada?</p><p>Unax · <a href="https://unaxaller.com">unaxaller.com</a></p>`;
-    const r = validateSequence({ subject: validSubject, bodies, scenario: 'no_web' });
+  it('rechaza precio fuera del FU3', () => {
+    const fu1WithPrice = '<p style="margin:0 0 10px 0">Son 149€/mes, una ganga. ¿Miro tu caso?</p><p>Unax</p>';
+    const r = validateSequence({ ...validSequence, bodies: [validInitial, fu1WithPrice, fu2, fu3, fu4] });
     expect(r.ok).toBe(false);
-    if (r.ok) return;
-    expect(r.errors.join(' ')).toMatch(/email2.*recordatorio/i);
+    if (!r.ok) expect(r.errors.some((e) => /precio/i.test(e))).toBe(true);
   });
 
-  it('propagates strict errors from the initial email (body[0])', () => {
-    const bodies = goodBodies();
-    bodies[0] = bodies[0].replace('<b>0€ de pago inicial:</b>', '0€ de pago inicial:');
-    const r = validateSequence({ subject: validSubject, bodies, scenario: 'no_web' });
+  it('rechaza FU3 sin precio', () => {
+    const fu3NoPrice = '<p style="margin:0 0 10px 0">Va con garantía, probarlo no cuesta nada. ¿Lo hablamos?</p><p>Unax</p>';
+    const r = validateSequence({ ...validSequence, bodies: [validInitial, fu1, fu2, fu3NoPrice, fu4] });
     expect(r.ok).toBe(false);
-    if (r.ok) return;
-    expect(r.errors.join(' ')).toMatch(/email1/i);
+    if (!r.ok) expect(r.errors.some((e) => /FU3.*precio/i.test(e))).toBe(true);
+  });
+
+  it('rechaza follow-up demasiado largo', () => {
+    const longFu = '<p style="margin:0 0 10px 0">' + 'palabra '.repeat(95) + '</p><p>Unax</p>';
+    const r = validateSequence({ ...validSequence, bodies: [validInitial, longFu, fu2, fu3, fu4] });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errors.some((e) => /largo/i.test(e))).toBe(true);
   });
 });

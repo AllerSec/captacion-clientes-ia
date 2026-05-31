@@ -22,14 +22,14 @@ const FORBIDDEN_TECH = [
 ];
 
 function bodyMentionsHttpsAsWord(body: string): boolean {
-  // Quita las URLs href="https://..." y luego busca "https" como palabra suelta.
   const stripped = body.replace(/href="https?:\/\/[^"]*"/gi, '');
   return /\bhttps\b/i.test(stripped);
 }
 
-const SIGNATURE_RX = /unaxaller\.com/i;
-// Subject debe mencionar "Presencia en Google" y "{NOMBRE_NEGOCIO}" o "competencia" (fallback).
-const EXPECTED_SUBJECT_RX = /presencia en google/i;
+// El precio (0€ / 149€) NO debe aparecer en el email 1 ni en FU1/FU2/FU4.
+// Solo se permite en el FU3 (email4_body). El email 1 va sin precio (decisión de
+// diseño auditada 2026-05-31: el primer toque busca respuesta, no vender).
+const PRICE_RX = /\b0\s*€|\b149\s*€|149\/mes|€\/mes/i;
 
 export function validateGeneratedEmail(input: ValidateInput): ValidateResult {
   const errors: string[] = [];
@@ -38,51 +38,35 @@ export function validateGeneratedEmail(input: ValidateInput): ValidateResult {
   const detailsMentionMobile = input.details.some(d => /móvil/i.test(d));
 
   if (subj.length === 0) errors.push('subject: vacío');
-  if (!EXPECTED_SUBJECT_RX.test(subj)) errors.push('subject: debe contener "Presencia en Google"');
-  if (/móvil/i.test(subj)) errors.push('subject: contiene "móvil" (prohibido)');
+  // Asunto corto estilo interno (2-5 palabras). No debe parecer venta ni llevar precio.
+  if (subj.split(/\s+/).length > 6) errors.push('subject: demasiado largo (máx ~5 palabras)');
+  if (PRICE_RX.test(subj)) errors.push('subject: no debe contener precio');
 
   for (const rx of FORBIDDEN_TECH) {
-    if (rx.test(body)) {
-      errors.push(`body: afirmación técnica prohibida (${rx.source})`);
-    }
+    if (rx.test(body)) errors.push(`body: afirmación técnica prohibida (${rx.source})`);
   }
-  if (bodyMentionsHttpsAsWord(body)) {
-    errors.push('body: contiene "HTTPS" como palabra suelta');
-  }
-
+  if (bodyMentionsHttpsAsWord(body)) errors.push('body: contiene "HTTPS" como palabra suelta');
   if (/móvil/i.test(body) && !detailsMentionMobile) {
     errors.push('body: contiene "móvil" pero details no lo justifica');
   }
 
-  // El nuevo formato Renting Web tiene 3 bullets en negrita + posiblemente "Renting Web"
-  // + competidor en negrita. Pedimos al menos los tres anchors de la oferta.
-  if (!/<b>0€ de pago inicial:?<\/b>/i.test(body)) {
-    errors.push('body: falta el bullet "<b>0€ de pago inicial:</b>"');
-  }
-  if (!/<b>Cuota fija de 149€\/mes/i.test(body)) {
-    errors.push('body: falta el bullet "<b>Cuota fija de 149€/mes..."');
-  }
-  if (!/<b>Garantía de 30 días:?<\/b>/i.test(body)) {
-    errors.push('body: falta el bullet "<b>Garantía de 30 días:</b>"');
+  // Email 1: SIN precio (va en el FU3).
+  if (PRICE_RX.test(body)) {
+    errors.push('body(email1): no debe mencionar precio (0€/149€); el precio va en el FU3');
   }
 
-  if (!SIGNATURE_RX.test(body)) errors.push('body: firma no encontrada');
+  // Email 1: UN solo enlace, el del caso. NO debe llevar unaxaller.com (ese va en el FU2).
+  if (/unaxaller\.com/i.test(body)) {
+    errors.push('body(email1): no debe llevar unaxaller.com (ese enlace va en el FU2)');
+  }
 
-  // El body DEBE empezar con el saludo. No se permiten líneas antes (preguntas
-  // tipo "¿Cuánta gente os busca?" que Claude se inventa).
+  // Debe empezar con el saludo, sin líneas inventadas antes.
   const trimmedBody = body.trimStart();
   if (!/^<p[^>]*>Hola, equipo de /i.test(trimmedBody)) {
     errors.push('body: debe empezar con "<p>Hola, equipo de ..." (sin líneas extra antes)');
   }
 
-  // Solo UN párrafo de caso de éxito. Si el modelo lo duplica ("Hace poco trabajé..."
-  // dos veces, una inventada y otra del template), rechazar.
-  const caseStudyMatches = body.match(/Hace poco trabaj[eé]/gi) ?? [];
-  if (caseStudyMatches.length > 1) {
-    errors.push(`body: aparece "Hace poco trabajé" ${caseStudyMatches.length} veces (debe ser 1)`);
-  }
-
-  // Frases inventadas conocidas que Claude tiende a meter — bloquear.
+  // Frases inventadas conocidas que Claude tiende a meter.
   const FORBIDDEN_PHRASES = [
     /¿Cu[aá]nta gente os busca/i,
     /He montado web a otr/i,
@@ -90,11 +74,10 @@ export function validateGeneratedEmail(input: ValidateInput): ValidateResult {
     /s[eé] qu[eé] cosas mueven la aguja/i,
   ];
   for (const rx of FORBIDDEN_PHRASES) {
-    if (rx.test(body)) {
-      errors.push(`body: contiene frase inventada (${rx.source})`);
-    }
+    if (rx.test(body)) errors.push(`body: contiene frase inventada (${rx.source})`);
   }
 
+  // El email 1 DEBE incluir el enlace del caso (prueba) si hay ejemplo de sector.
   if (input.requiredExampleUrl) {
     const escaped = input.requiredExampleUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     if (!new RegExp(escaped, 'i').test(body)) {
@@ -102,6 +85,7 @@ export function validateGeneratedEmail(input: ValidateInput): ValidateResult {
     }
   }
 
+  // Y DEBE nombrar al competidor real.
   if (input.requiredCompetitorName) {
     const escaped = input.requiredCompetitorName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     if (!new RegExp(escaped, 'i').test(body)) {
@@ -123,20 +107,22 @@ export interface ValidateSequenceInput {
 // Frases de "recordatorio vacío" que matan la respuesta en follow-ups.
 const FORBIDDEN_FOLLOWUP_PHRASES = [
   /¿?\s*vist[ei]+s mi (correo|email|mensaje)/i,
+  /¿?\s*has visto mi (correo|email|mensaje)/i,
   /haciendo seguimiento/i,
   /¿?\s*recib[ií]st[ei]+s mi/i,
-  /por si (no )?lo (visteis|leísteis|recibisteis)/i,
+  /por si (no )?lo (visteis|leísteis|recibisteis|viste|leíste)/i,
+  /te escribo de nuevo/i,
 ];
 
-// Tope de palabras por follow-up (texto plano). El prompt pide <70; damos margen a 90.
 const FOLLOWUP_MAX_WORDS = 90;
 
 function stripTags(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-// Valida la secuencia completa: body[0] con las reglas estrictas del email inicial,
-// y los follow-ups (body[1..]) con reglas laxas (firma + sin frases prohibidas + brevedad).
+// Valida la secuencia completa: email 1 con reglas del inicial (sin precio, con caso),
+// y los follow-ups con sus reglas (sin recordatorios vacíos, brevedad, precio SOLO en FU3,
+// unaxaller.com presente a partir del FU2).
 export function validateSequence(input: ValidateSequenceInput): ValidateResult {
   const errors: string[] = [];
 
@@ -158,7 +144,8 @@ export function validateSequence(input: ValidateSequenceInput): ValidateResult {
   for (let i = 1; i < input.bodies.length; i++) {
     const body = input.bodies[i];
     const label = `email${i + 1}`;
-    if (!SIGNATURE_RX.test(body)) errors.push(`${label}: firma unaxaller.com no encontrada`);
+    const isFU3 = i === 3; // email4_body = FU3, el único con precio
+
     if (bodyMentionsHttpsAsWord(body)) errors.push(`${label}: contiene "HTTPS" como palabra suelta`);
     for (const rx of FORBIDDEN_TECH) {
       if (rx.test(body)) errors.push(`${label}: afirmación técnica prohibida (${rx.source})`);
@@ -166,8 +153,19 @@ export function validateSequence(input: ValidateSequenceInput): ValidateResult {
     for (const rx of FORBIDDEN_FOLLOWUP_PHRASES) {
       if (rx.test(body)) errors.push(`${label}: frase de recordatorio vacío prohibida (${rx.source})`);
     }
+
+    // El precio solo en el FU3.
+    if (PRICE_RX.test(body) && !isFU3) {
+      errors.push(`${label}: no debe mencionar precio (el precio va solo en el FU3)`);
+    }
+    if (isFU3 && !PRICE_RX.test(body)) {
+      errors.push(`${label}(FU3): debe mencionar el precio (0€ / 149€)`);
+    }
+
     const words = stripTags(body).split(' ').filter(w => w.length > 0).length;
-    if (words > FOLLOWUP_MAX_WORDS) errors.push(`${label}: demasiado largo (${words} palabras, máx ${FOLLOWUP_MAX_WORDS})`);
+    if (words > FOLLOWUP_MAX_WORDS) {
+      errors.push(`${label}: demasiado largo (${words} palabras, máx ${FOLLOWUP_MAX_WORDS})`);
+    }
   }
 
   return errors.length === 0 ? { ok: true } : { ok: false, errors };
