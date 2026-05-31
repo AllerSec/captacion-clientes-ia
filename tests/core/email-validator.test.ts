@@ -15,7 +15,7 @@ const validSubject = 'taller en Donostia';
 
 const fu1 = '<p style="margin:0 0 10px 0">Cuando alguien te busca en Google y no sales, ni te ve. Llama al primero que aparece. ¿Miro tu caso?</p><p style="margin:0 0 10px 0">Unax</p>';
 const fu2 = '<p style="margin:0 0 10px 0">Un taller de la zona estaba igual; ahora esas llamadas se las queda él. Tienes su web y más en <a href="https://unaxaller.com">unaxaller.com</a>. ¿Le echas un ojo?</p>';
-const fu3 = '<p style="margin:0 0 10px 0">Va con un mes de garantía: si no te trae más llamadas, te devuelvo el dinero. Empiezas en <b>0€</b> y pagas <b>149€/mes</b>, como al gestor. ¿Lo hablamos cinco minutos?</p><p style="margin:0 0 10px 0">Unax</p>';
+const fu3 = '<p style="margin:0 0 10px 0">Lo pongo fácil: empiezas sin poner nada y son <b>149€/mes</b>, como el gestor. El primer mes va a prueba: si no te trae más llamadas, no lo pagas. ¿Te enseño cómo quedaría?</p><p style="margin:0 0 10px 0">Unax</p>';
 const fu4 = '<p style="margin:0 0 10px 0">Lo dejo aquí, este es mi último correo. Respóndeme con un número:</p><p style="margin:0 0 10px 0">1 = me interesa<br>2 = ahora no<br>3 = déjalo</p><p style="margin:0 0 10px 0">Un abrazo, Unax</p>';
 
 const validSequence = {

@@ -45,7 +45,7 @@ const validBody = `<p style="margin:0 0 10px 0">Hola, equipo de Taller X:</p>`
 
 const fu1 = `<p style="margin:0 0 10px 0">Cuando alguien te busca en Google y no sales, ni te ve. Llama al primero que aparece. ¿Miro tu caso?</p><p style="margin:0 0 10px 0">Unax</p>`;
 const fu2 = `<p style="margin:0 0 10px 0">Un taller estaba igual; ahora se las queda él. Tienes su web y más en <a href="https://unaxaller.com">unaxaller.com</a>. ¿Le echas un ojo?</p>`;
-const fu3 = `<p style="margin:0 0 10px 0">Va con un mes de garantía: si no te trae más llamadas, te devuelvo el dinero. Empiezas en <b>0€</b> y pagas <b>149€/mes</b>, como al gestor. ¿Lo hablamos cinco minutos?</p><p style="margin:0 0 10px 0">Unax</p>`;
+const fu3 = `<p style="margin:0 0 10px 0">Lo pongo fácil: empiezas sin poner nada y son <b>149€/mes</b>, como el gestor. El primer mes va a prueba: si no te trae más llamadas, no lo pagas. ¿Te enseño cómo quedaría?</p><p style="margin:0 0 10px 0">Unax</p>`;
 const fu4 = `<p style="margin:0 0 10px 0">Lo dejo aquí, último correo. 1 = me interesa, 2 = ahora no, 3 = déjalo. Un abrazo, Unax</p>`;
 const validBodies = [validBody, fu1, fu2, fu3, fu4];
 

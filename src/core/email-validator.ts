@@ -153,13 +153,16 @@ export function validateSequence(input: ValidateSequenceInput): ValidateResult {
     for (const rx of FORBIDDEN_FOLLOWUP_PHRASES) {
       if (rx.test(body)) errors.push(`${label}: frase de recordatorio vacío prohibida (${rx.source})`);
     }
+    for (const rx of SPAM_WORDS) {
+      if (rx.test(body)) errors.push(`${label}: palabra que dispara spam, evítala (${rx.source})`);
+    }
 
     // El precio solo en el FU3.
     if (PRICE_RX.test(body) && !isFU3) {
       errors.push(`${label}: no debe mencionar precio (el precio va solo en el FU3)`);
     }
     if (isFU3 && !PRICE_RX.test(body)) {
-      errors.push(`${label}(FU3): debe mencionar el precio (0€ / 149€)`);
+      errors.push(`${label}(FU3): debe mencionar el precio (149€/mes)`);
     }
 
     const words = stripTags(body).split(' ').filter(w => w.length > 0).length;
