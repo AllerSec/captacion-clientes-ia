@@ -18,16 +18,24 @@ export function buildSystemPrompt(params: {
 }): string {
   const { sectorLabel, exampleUrl, sector } = params;
 
-  const isFem = /óptica|farmacia|empresa/i.test(sectorLabel);
-  const sectorPlural = sector === 'industria'
-    ? 'empresas de mecanizado'
-    : sectorLabel === 'óptica'
-      ? 'ópticas'
-      : sectorLabel === 'farmacia'
-        ? 'farmacias'
-        : sectorLabel === 'taller'
-          ? 'talleres'
-          : `${sectorLabel}s`;
+  const isFem = /óptica|farmacia|empresa|peluquería|clínica|gestoría|academia/i.test(sectorLabel);
+  const PLURAL_MAP: Record<string, string> = {
+    'industria': 'empresas de mecanizado',
+    'empresa de mecanizado': 'empresas de mecanizado',
+    'óptica': 'ópticas',
+    'farmacia': 'farmacias',
+    'taller': 'talleres',
+    'peluquería': 'peluquerías',
+    'clínica dental': 'clínicas dentales',
+    'clínica de fisioterapia': 'clínicas de fisioterapia',
+    'fontanero': 'fontaneros',
+    'electricista': 'electricistas',
+    'cerrajero': 'cerrajeros',
+    'restaurante': 'restaurantes',
+    'gestoría': 'gestorías',
+    'academia': 'academias',
+  };
+  const sectorPlural = PLURAL_MAP[sectorLabel] ?? `${sectorLabel}s`;
   // "llamadas" para taller/industria, "clientes" para óptica/farmacia.
   const queRegalan = (sector === 'taller' || sector === 'industria') ? 'llamadas' : 'clientes';
   const vuestroEl = isFem ? 'vuestra' : 'vuestro';

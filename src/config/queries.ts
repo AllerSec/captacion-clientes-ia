@@ -1,12 +1,13 @@
 /**
  * Queries por tier. Tier 1 = más cerca de Irún, Tier 8 = más lejos.
- * Sectores: óptica, taller mecánico, farmacia.
+ * Sectores: óptica, taller mecánico, farmacia, peluquería, clínica dental,
+ *   fisioterapeuta, fontanero, electricista, cerrajero, restaurante, gestoría.
  * Solo contactamos negocios SIN web: el sistema descarta los que tienen.
  */
 export const QUERIES_BY_TIER: Record<number, string[]> = {
-  // ===== TIER 1: Irún + comarca + Bera + Bidasoa (alrededor de Tecmac/Unax) =====
+  // ===== TIER 1: Irún + comarca inmediata (radio ~15 km) — TODOS los sectores =====
   1: [
-    // Gipuzkoa Oriental (Bidasoa + Donostialdea Este)
+    // Gipuzkoa Oriental (Bidasoa + Donostialdea Este) — sectores originales
     'óptica Irún', 'taller mecánico Irún', 'farmacia Irún',
     'óptica Hondarribia', 'taller mecánico Hondarribia', 'farmacia Hondarribia',
     'óptica Pasaia', 'taller mecánico Pasaia', 'farmacia Pasaia',
@@ -14,7 +15,7 @@ export const QUERIES_BY_TIER: Record<number, string[]> = {
     'óptica Errenteria', 'taller mecánico Errenteria', 'farmacia Errenteria',
     'óptica Oiartzun', 'taller mecánico Oiartzun', 'farmacia Oiartzun',
     'óptica Astigarraga', 'taller mecánico Astigarraga', 'farmacia Astigarraga',
-    // Navarra Norte (alrededor Bera/Tecmac)
+    // Navarra Norte (alrededor Bera/Tecmac) — sectores originales
     'óptica Bera', 'taller mecánico Bera', 'farmacia Bera',
     'óptica Lesaka', 'taller mecánico Lesaka', 'farmacia Lesaka',
     'óptica Elizondo', 'taller mecánico Elizondo', 'farmacia Elizondo',
@@ -29,6 +30,28 @@ export const QUERIES_BY_TIER: Record<number, string[]> = {
     'mecanizado Lesaka', 'taller de mecanizado Lesaka',
     'mecanizado Irún', 'caldereria Irún', 'ingeniería industrial Irún',
     'mecanizado Oiartzun', 'mecanizado Errenteria',
+    // Nuevos sectores — Irún y comarca inmediata (alta densidad de negocios sin web)
+    'peluquería Irún', 'clínica dental Irún', 'fisioterapeuta Irún',
+    'fontanero Irún', 'electricista Irún', 'cerrajero Irún',
+    'restaurante Irún', 'gestoría Irún', 'academia Irún',
+    'peluquería Hondarribia', 'clínica dental Hondarribia', 'fisioterapeuta Hondarribia',
+    'fontanero Hondarribia', 'electricista Hondarribia', 'restaurante Hondarribia',
+    'peluquería Errenteria', 'clínica dental Errenteria', 'fisioterapeuta Errenteria',
+    'fontanero Errenteria', 'electricista Errenteria', 'restaurante Errenteria',
+    'peluquería Oiartzun', 'clínica dental Oiartzun', 'restaurante Oiartzun',
+    'peluquería Pasaia', 'fontanero Pasaia', 'restaurante Pasaia',
+    'peluquería Lezo', 'restaurante Lezo',
+    'peluquería Astigarraga', 'restaurante Astigarraga',
+    // Nuevos sectores — Navarra Norte
+    'peluquería Elizondo', 'clínica dental Elizondo', 'fisioterapeuta Elizondo',
+    'restaurante Elizondo', 'fontanero Elizondo', 'electricista Elizondo',
+    'peluquería Bera', 'restaurante Bera', 'fontanero Bera',
+    'peluquería Lesaka', 'restaurante Lesaka',
+    'peluquería Doneztebe', 'restaurante Doneztebe',
+    // Municipios Tier 1 no cubiertos antes
+    'taller mecánico Ategorrieta', 'taller mecánico Altza',
+    'peluquería Altza', 'restaurante Altza', 'fontanero Altza',
+    'clínica dental Lezo', 'fisioterapeuta Lezo',
   ],
 
   // ===== TIER 2: Resto Gipuzkoa =====
@@ -159,7 +182,7 @@ export const QUERIES_BY_TIER: Record<number, string[]> = {
 export const MAX_TIER = 8;
 
 export const TIER_NAMES: Record<number, string> = {
-  1: 'Irún + Hondarribia',
+  1: 'Irún + comarca inmediata (Hondarribia, Errenteria, Oiartzun, Bidasoa, Baztan)',
   2: 'Gipuzkoa',
   3: 'Bizkaia',
   4: 'Navarra',
