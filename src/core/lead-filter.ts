@@ -27,12 +27,6 @@ export function qualifyLead(l: LeadInput): QualifyResult {
   if (INVALID_EMAIL_PATTERNS.some(rx => rx.test(l.email!))) {
     return { qualified: false, reason: 'invalid_email' };
   }
-  if (l.rating == null || l.rating < 3.5) {
-    return { qualified: false, reason: 'low_rating' };
-  }
-  if (l.review_count == null || l.review_count < 5) {
-    return { qualified: false, reason: 'few_reviews' };
-  }
   if (BLACKLIST.some(rx => rx.test(l.business_name))) {
     return { qualified: false, reason: 'blacklisted' };
   }
@@ -56,12 +50,6 @@ export interface PreEnrichInput {
 }
 
 export function qualifyLeadPreEnrich(l: PreEnrichInput): QualifyResult {
-  if (l.rating == null || l.rating < 3.5) {
-    return { qualified: false, reason: 'low_rating' };
-  }
-  if (l.review_count == null || l.review_count < 5) {
-    return { qualified: false, reason: 'few_reviews' };
-  }
   if (BLACKLIST.some(rx => rx.test(l.business_name))) {
     return { qualified: false, reason: 'blacklisted' };
   }
