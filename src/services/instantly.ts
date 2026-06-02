@@ -169,12 +169,17 @@ export async function listLeadsContactedSince(since: Date, limit = 100): Promise
       limit,
       ...(cursor ? { starting_after: cursor } : {}),
     });
-    for (const lead of page.items ?? []) {
+    const items = page.items ?? [];
+    let foundAny = false;
+    for (const lead of items) {
       if (lead.timestamp_last_contact && new Date(lead.timestamp_last_contact).getTime() > sinceMs) {
         out.push(lead);
+        foundAny = true;
       }
     }
-    if (!page.next_starting_after) break;
+    // Instantly devuelve por más-reciente-primero. Si ningún item de la página supera
+    // el umbral, todos los siguientes tampoco lo harán → early exit.
+    if (!page.next_starting_after || !foundAny) break;
     cursor = page.next_starting_after;
   }
   return out;

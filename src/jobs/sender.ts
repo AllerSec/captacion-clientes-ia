@@ -32,9 +32,14 @@ export async function runSender(opts: RunSenderOpts = {}): Promise<void> {
 
     const now = opts.now ?? new Date();
 
+    if (!env.INSTANTLY_API_KEY || !env.INSTANTLY_CAMPAIGN_ID) {
+      await notifyError('error', 'Instantly sin credenciales', 'INSTANTLY_API_KEY o INSTANTLY_CAMPAIGN_ID no configurados en Railway. Ningún email se enviará.');
+      return;
+    }
+
     const variants = await getActiveVariants();
     if (variants.length === 0) {
-      log.warn('no active variants — aborting');
+      await notifyError('warn', 'Sin variantes activas', 'No hay variantes activas en la tabla variants. El sender no puede generar emails.');
       return;
     }
 

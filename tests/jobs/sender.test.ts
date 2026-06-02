@@ -21,6 +21,8 @@ vi.mock('../../src/config/env.js', () => ({
   loadEnv: () => ({
     DRY_RUN: false,
     KILL_SWITCH: false,
+    INSTANTLY_API_KEY: 'test-key',
+    INSTANTLY_CAMPAIGN_ID: '00000000-0000-0000-0000-000000000001',
     SENDER_NAME: 'Unax',
     SENDER_WEBSITE: 'unaxaller.com',
     SENDER_CITY: 'Irún',

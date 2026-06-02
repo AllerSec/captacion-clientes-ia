@@ -55,9 +55,11 @@ export async function runScraperAuto(): Promise<void> {
       log.info({ count: queriesToRun.length }, 'recurring: queries selected');
     }
 
+    let totalFetched = 0;
     for (const { q, tier } of queriesToRun) {
       try {
         const places = await searchBusinesses(q, 50);
+        totalFetched += places.length;
         log.info({ query: q, tier, count: places.length }, 'fetched places');
         // Top 3 competidores CON web de esta query, en el orden devuelto por Apify
         // (Apify devuelve por relevancia/ranking en Google). Sirven para personalizar
@@ -101,6 +103,12 @@ export async function runScraperAuto(): Promise<void> {
     }
 
     if (!state.last_burst_at) await markBurstDone();
+
+    if (queriesToRun.length > 0 && totalFetched === 0) {
+      await notifyError('warn', 'Scraper sin resultados de Apify',
+        `Corrieron ${queriesToRun.length} queries pero Apify devolvió 0 lugares. Posible bloqueo o créditos agotados.`);
+    }
+
     await analyzeAndFilter();
   } catch (err) {
     await notifyError('error', 'Scraper crashed', err instanceof Error ? (err.stack ?? err.message) : String(err));
@@ -263,13 +271,18 @@ async function analyzeAndFilter(): Promise<void> {
   log.info({ analyzed: news.length }, 'analyze: done');
 
   // Filter ANALYZED: todos los que llegan aquí ya pasaron el qualify en analyzeOneLead.
-  // Solo promovemos a READY_TO_SEND.
-  const analyzed = await getLeadsByStatus('ANALYZED', 500);
-  for (const lead of analyzed) {
-    await updateLead(lead.id, { status: 'READY_TO_SEND', notes: null });
+  // Cap: no sobrepasar el threshold; el scraper de mañana promoverá el resto.
+  const already = await countReadyToSend();
+  const toPromote = Math.max(0, READY_TO_SEND_THRESHOLD - already);
+  if (toPromote > 0) {
+    const analyzed = await getLeadsByStatus('ANALYZED', toPromote);
+    for (const lead of analyzed) {
+      await updateLead(lead.id, { status: 'READY_TO_SEND', notes: null });
+    }
+    log.info({ promoted: analyzed.length }, 'analyze+filter: promoted to READY_TO_SEND');
+  } else {
+    log.info('analyze+filter: READY_TO_SEND threshold already met, skipping promotion');
   }
-
-  log.info('analyze+filter finished');
 }
 
 // Keep the legacy entry-point for tests (existing test mocks the old runScraper):

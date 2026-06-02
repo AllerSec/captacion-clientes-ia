@@ -167,20 +167,24 @@ export async function getEmailByLead(leadId: string) {
 const WATCHER_CURSOR_KEY = 'watcher_cursor';
 
 export async function getWatcherCursor(): Promise<Date | null> {
-  const { data, error } = await getClient()
-    .from('alert_dedup')
-    .select('last_sent')
-    .eq('key', WATCHER_CURSOR_KEY)
-    .limit(1);
-  if (error) throw new Error(`getWatcherCursor: ${error.message}`);
-  return data?.[0]?.last_sent ? new Date(data[0].last_sent) : null;
+  return withRetry(async () => {
+    const { data, error } = await getClient()
+      .from('alert_dedup')
+      .select('last_sent')
+      .eq('key', WATCHER_CURSOR_KEY)
+      .limit(1);
+    if (error) throw new Error(`getWatcherCursor: ${error.message}`);
+    return data?.[0]?.last_sent ? new Date(data[0].last_sent) : null;
+  });
 }
 
 export async function setWatcherCursor(when: Date): Promise<void> {
-  const { error } = await getClient()
-    .from('alert_dedup')
-    .upsert({ key: WATCHER_CURSOR_KEY, last_sent: when.toISOString() });
-  if (error) throw new Error(`setWatcherCursor: ${error.message}`);
+  return withRetry(async () => {
+    const { error } = await getClient()
+      .from('alert_dedup')
+      .upsert({ key: WATCHER_CURSOR_KEY, last_sent: when.toISOString() });
+    if (error) throw new Error(`setWatcherCursor: ${error.message}`);
+  });
 }
 
 export async function shouldFireAlert(key: string, cooldownHours = 6): Promise<boolean> {
@@ -206,12 +210,16 @@ export async function getRecentlyUsedQueries(daysBack = 30): Promise<Set<string>
   return new Set((data ?? []).map((r: any) => r.query));
 }
 
-/** Devuelve un mapa query → última fecha de uso (epoch ms). Queries nunca usadas no aparecen. */
+/** Devuelve un mapa query → última fecha de uso (epoch ms). Queries nunca usadas no aparecen.
+ *  Solo necesitamos la última ejecución por query, así que limitamos a las últimas 4000 filas
+ *  (≈114 días a 35 queries/día) — suficiente para cualquier query del catálogo (343 total).
+ */
 export async function getQueryLastUsedDates(): Promise<Map<string, number>> {
   const { data, error } = await getClient()
     .from('query_history')
     .select('query, scraped_at')
-    .order('scraped_at', { ascending: false });
+    .order('scraped_at', { ascending: false })
+    .limit(4000);
   if (error) throw new Error(`getQueryLastUsedDates: ${error.message}`);
   const map = new Map<string, number>();
   for (const r of (data ?? []) as Array<{ query: string; scraped_at: string }>) {
