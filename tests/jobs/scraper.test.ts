@@ -82,7 +82,7 @@ describe('runScraper', () => {
     }));
   });
 
-  it('skips lead with low rating (no web)', async () => {
+  it('promotes lead with no web and email to ANALYZED', async () => {
     mockSearch.mockResolvedValue([]);
     mockGetByStatus
       .mockResolvedValueOnce([{
@@ -95,12 +95,13 @@ describe('runScraper', () => {
     await runScraper([]);
 
     expect(mockUpdate).toHaveBeenCalledWith('lead-3', expect.objectContaining({
-      status: 'SKIPPED',
+      status: 'ANALYZED',
     }));
   });
 
-  it('without email and low rating: skipped without calling enricher', async () => {
+  it('without email: calls enricher regardless of rating', async () => {
     mockSearch.mockResolvedValue([]);
+    mockEnrich.mockResolvedValue({ kind: 'nothing_found', reasoning: 'nope', durationMs: 10 });
     mockGetByStatus
       .mockResolvedValueOnce([{
         id: 'lead-pre', business_name: 'Taller P', website: null,
@@ -111,10 +112,7 @@ describe('runScraper', () => {
     const { runScraper } = await import('../../src/jobs/scraper.js');
     await runScraper([]);
 
-    expect(mockEnrich).not.toHaveBeenCalled();
-    expect(mockUpdate).toHaveBeenCalledWith('lead-pre', expect.objectContaining({
-      status: 'SKIPPED', notes: 'low_rating',
-    }));
+    expect(mockEnrich).toHaveBeenCalled();
   });
 
   it('without email but good reputation: enricher finds email, lead promoted', async () => {

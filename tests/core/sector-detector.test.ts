@@ -43,8 +43,13 @@ describe('detectSector', () => {
     expect(detectSector('taller de mecanizado Eibar').sector).toBe('industria');
   });
 
-  it('returns unknown for unrecognized query', () => {
+  it('detects restaurante', () => {
     const r = detectSector('restaurante Madrid');
+    expect(r.sector).toBe('restaurante');
+  });
+
+  it('returns unknown for truly unrecognized query', () => {
+    const r = detectSector('zapatería remendón Bilbao');
     expect(r.sector).toBe('unknown');
     expect(r.exampleUrl).toBeNull();
   });

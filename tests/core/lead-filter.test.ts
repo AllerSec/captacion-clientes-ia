@@ -11,22 +11,6 @@ describe('qualifyLead — gates de reputación / contacto', () => {
     expect(qualifyLead(base).qualified).toBe(true);
   });
 
-  it('rejects low rating', () => {
-    expect(qualifyLead({ ...base, rating: 3.0 }).qualified).toBe(false);
-  });
-
-  it('accepts rating at the 3.5 threshold', () => {
-    expect(qualifyLead({ ...base, rating: 3.5 }).qualified).toBe(true);
-  });
-
-  it('rejects too few reviews', () => {
-    expect(qualifyLead({ ...base, review_count: 4 }).qualified).toBe(false);
-  });
-
-  it('accepts reviews at the 5 threshold', () => {
-    expect(qualifyLead({ ...base, review_count: 5 }).qualified).toBe(true);
-  });
-
   it('rejects missing email', () => {
     expect(qualifyLead({ ...base, email: null }).qualified).toBe(false);
   });
@@ -77,33 +61,10 @@ describe('qualifyLeadPreEnrich — gate antes de gastar Firecrawl', () => {
     expect(qualifyLeadPreEnrich(baseNoMail).qualified).toBe(true);
   });
 
-  it('rejects low rating without calling Firecrawl', () => {
-    const r = qualifyLeadPreEnrich({ ...baseNoMail, rating: 3.0 });
-    expect(r.qualified).toBe(false);
-    expect(r.reason).toBe('low_rating');
-  });
-
-  it('rejects too few reviews without calling Firecrawl', () => {
-    const r = qualifyLeadPreEnrich({ ...baseNoMail, review_count: 4 });
-    expect(r.qualified).toBe(false);
-    expect(r.reason).toBe('few_reviews');
-  });
-
   it('rejects blacklisted brands without calling Firecrawl', () => {
     const r = qualifyLeadPreEnrich({ ...baseNoMail, business_name: 'Vital Dent Bilbao' });
     expect(r.qualified).toBe(false);
     expect(r.reason).toBe('blacklisted');
   });
 
-  it('rejects when rating is null', () => {
-    const r = qualifyLeadPreEnrich({ ...baseNoMail, rating: null });
-    expect(r.qualified).toBe(false);
-    expect(r.reason).toBe('low_rating');
-  });
-
-  it('rejects when review_count is null', () => {
-    const r = qualifyLeadPreEnrich({ ...baseNoMail, review_count: null });
-    expect(r.qualified).toBe(false);
-    expect(r.reason).toBe('few_reviews');
-  });
 });
