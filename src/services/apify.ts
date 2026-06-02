@@ -1,5 +1,6 @@
 import { ApifyClient } from 'apify-client';
 import { loadEnv } from '../config/env.js';
+import { notifyError } from '../core/health-monitor.js';
 
 export interface ApifyPlace {
   place_id: string;
@@ -51,17 +52,25 @@ function extractCityFromQuery(query: string): string | null {
 
 export async function searchBusinesses(query: string, maxItems = 50): Promise<ApifyPlace[]> {
   const city = extractCityFromQuery(query);
-  const run = await getClient().actor(ACTOR_ID).call({
-    searchStringsArray: [query],
-    maxCrawledPlacesPerSearch: maxItems,
-    language: 'es',
-    countryCode: 'es',
-    // Fijar la ciudad evita que el actor se vaya a scrapear toda España
-    // cuando interpreta "country: es" como "todo el país".
-    ...(city ? { locationQuery: city } : {}),
-    includeWebResults: false,
-    scrapeContacts: true,
-  });
+  let run: { defaultDatasetId?: string | null };
+  try {
+    run = await getClient().actor(ACTOR_ID).call({
+      searchStringsArray: [query],
+      maxCrawledPlacesPerSearch: maxItems,
+      language: 'es',
+      countryCode: 'es',
+      ...(city ? { locationQuery: city } : {}),
+      includeWebResults: false,
+      scrapeContacts: true,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    // Cuota agotada o token inválido: Apify lanza un error con 402/401 en el mensaje.
+    if (/402|401|quota|limit|insufficient/i.test(msg)) {
+      await notifyError('error', 'Apify sin créditos', `Apify devolvió error al lanzar actor: ${msg}. El scraper no puede buscar leads hasta que se renueven los créditos o se actualice el token.`);
+    }
+    throw err;
+  }
   if (!run.defaultDatasetId) return [];
   const { items } = await getClient().dataset(run.defaultDatasetId).listItems();
   return (items as any[]).map(mapItem).filter(p => p.place_id);

@@ -24,6 +24,9 @@ export async function runSender(opts: RunSenderOpts = {}): Promise<void> {
     const policy = canSendNow({ killSwitch: env.KILL_SWITCH });
     if (!policy.allowed) {
       log.info({ reason: policy.reason }, 'send skipped');
+      if (policy.reason === 'kill_switch') {
+        await notifyError('warn', 'KILL_SWITCH activo', 'El sender está bloqueado por KILL_SWITCH=true. Ningún email se enviará hasta que se desactive en Railway.');
+      }
       return;
     }
 

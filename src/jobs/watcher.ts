@@ -1,4 +1,4 @@
-import { updateLead, recordMetric, getEmailByLead } from '../services/supabase.js';
+import { updateLead, recordMetric, getEmailByLead, findLeadByInstantlyId } from '../services/supabase.js';
 import {
   listLeadsByStatus,
   listLeadsContactedSince,
@@ -8,6 +8,13 @@ import {
 import { logger } from '../lib/logger.js';
 import { notifyError } from '../core/health-monitor.js';
 import { getWatcherCursor, setWatcherCursor } from '../services/supabase.js';
+
+/** Resuelve el lead_db_id: primero desde custom vars de Instantly, luego busca en Supabase por notes. */
+async function resolveDbId(lead: InstantlyLead): Promise<string | null> {
+  const fromCustom = getLeadDbIdFromCustom(lead);
+  if (fromCustom) return fromCustom;
+  return findLeadByInstantlyId(lead.id);
+}
 
 export async function runWatcher(): Promise<void> {
   try {
@@ -20,9 +27,9 @@ export async function runWatcher(): Promise<void> {
     const contacted = await listLeadsContactedSince(since);
     log.info({ count: contacted.length, since: since.toISOString() }, 'leads newly contacted');
     for (const lead of contacted) {
-      const dbId = getLeadDbIdFromCustom(lead);
+      const dbId = await resolveDbId(lead);
       if (!dbId) {
-        log.warn({ instantlyId: lead.id }, 'contacted lead has no lead_db_id custom var');
+        log.warn({ instantlyId: lead.id }, 'contacted lead: no db match, skipping');
         continue;
       }
       const email = await getEmailByLead(dbId);
@@ -36,9 +43,9 @@ export async function runWatcher(): Promise<void> {
     const replied = await listLeadsByStatus('FILTER_VAL_REPLIED');
     log.info({ count: replied.length }, 'leads with replies');
     for (const lead of replied) {
-      const dbId = getLeadDbIdFromCustom(lead);
+      const dbId = await resolveDbId(lead);
       if (!dbId) {
-        log.warn({ instantlyId: lead.id }, 'replied lead has no lead_db_id custom var');
+        log.warn({ instantlyId: lead.id }, 'replied lead: no db match, skipping');
         continue;
       }
       const email = await getEmailByLead(dbId);
@@ -52,9 +59,9 @@ export async function runWatcher(): Promise<void> {
     const bounced = await listLeadsByStatus('FILTER_VAL_BOUNCED');
     log.info({ count: bounced.length }, 'leads bounced');
     for (const lead of bounced) {
-      const dbId = getLeadDbIdFromCustom(lead);
+      const dbId = await resolveDbId(lead);
       if (!dbId) {
-        log.warn({ instantlyId: lead.id }, 'bounced lead has no lead_db_id custom var');
+        log.warn({ instantlyId: lead.id }, 'bounced lead: no db match, skipping');
         continue;
       }
       const email = await getEmailByLead(dbId);

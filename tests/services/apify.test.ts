@@ -11,6 +11,7 @@ vi.mock('apify-client', () => ({
 vi.mock('../../src/config/env.js', () => ({
   loadEnv: () => ({ APIFY_TOKEN: 't' }),
 }));
+vi.mock('../../src/core/health-monitor.js', () => ({ notifyError: vi.fn() }));
 
 describe('apify service', () => {
   beforeEach(() => { mockCall.mockReset(); mockListItems.mockReset(); });

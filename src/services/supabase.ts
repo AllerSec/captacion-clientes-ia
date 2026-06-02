@@ -89,6 +89,17 @@ export async function updateLead(id: string, patch: Partial<LeadRow>): Promise<v
   if (error) throw new Error(`updateLead: ${error.message}`);
 }
 
+/** Busca el lead_id de Supabase a partir del instantlyLeadId guardado en notes. */
+export async function findLeadByInstantlyId(instantlyLeadId: string): Promise<string | null> {
+  const { data, error } = await getClient()
+    .from('leads')
+    .select('id')
+    .like('notes', `%instantly_lead:${instantlyLeadId}%`)
+    .limit(1);
+  if (error) return null;
+  return data?.[0]?.id ?? null;
+}
+
 export async function recordEmailSent(row: {
   lead_id: string; subject: string; body: string;
   variant_id: string | null; gmail_message_id: string; gmail_thread_id: string;

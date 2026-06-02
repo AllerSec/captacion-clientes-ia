@@ -5,6 +5,7 @@ const mockUpdateLead = vi.fn();
 const mockRecordMetric = vi.fn();
 const mockGetCursor = vi.fn();
 const mockSetCursor = vi.fn();
+const mockFindLeadByInstantlyId = vi.fn();
 
 const mockListByStatus = vi.fn();
 const mockListContactedSince = vi.fn();
@@ -15,6 +16,7 @@ vi.mock('../../src/services/supabase.js', () => ({
   getEmailByLead: mockGetEmailByLead,
   getWatcherCursor: mockGetCursor,
   setWatcherCursor: mockSetCursor,
+  findLeadByInstantlyId: mockFindLeadByInstantlyId,
 }));
 vi.mock('../../src/services/instantly.js', () => ({
   listLeadsByStatus: mockListByStatus,
@@ -47,11 +49,12 @@ function instantlyLead(opts: { id: string; dbId: string; status?: number; lastCo
 describe('runWatcher', () => {
   beforeEach(() => {
     [mockGetEmailByLead, mockUpdateLead, mockRecordMetric, mockGetCursor, mockSetCursor,
-     mockListByStatus, mockListContactedSince].forEach(m => m.mockReset());
+     mockListByStatus, mockListContactedSince, mockFindLeadByInstantlyId].forEach(m => m.mockReset());
     mockGetCursor.mockResolvedValue(null);
     mockGetEmailByLead.mockResolvedValue({ variant_id: 'v1' });
     mockListContactedSince.mockResolvedValue([]);
     mockListByStatus.mockResolvedValue([]);
+    mockFindLeadByInstantlyId.mockResolvedValue(null);
   });
 
   it('marks newly-contacted lead as CONTACTED', async () => {
