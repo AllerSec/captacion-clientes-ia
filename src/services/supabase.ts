@@ -195,6 +195,20 @@ export async function getRecentlyUsedQueries(daysBack = 30): Promise<Set<string>
   return new Set((data ?? []).map((r: any) => r.query));
 }
 
+/** Devuelve un mapa query → última fecha de uso (epoch ms). Queries nunca usadas no aparecen. */
+export async function getQueryLastUsedDates(): Promise<Map<string, number>> {
+  const { data, error } = await getClient()
+    .from('query_history')
+    .select('query, scraped_at')
+    .order('scraped_at', { ascending: false });
+  if (error) throw new Error(`getQueryLastUsedDates: ${error.message}`);
+  const map = new Map<string, number>();
+  for (const r of (data ?? []) as Array<{ query: string; scraped_at: string }>) {
+    if (!map.has(r.query)) map.set(r.query, new Date(r.scraped_at).getTime());
+  }
+  return map;
+}
+
 export async function recordQueryUsed(query: string, tier: number, placesFound: number, uniqueInserted: number): Promise<void> {
   const { error } = await getClient().from('query_history').insert({
     query, tier, places_found: placesFound, unique_inserted: uniqueInserted,

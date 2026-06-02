@@ -58,3 +58,61 @@ export function burstQueries(recentlyUsed: Set<string>, maxBurstTier = 3): Burst
   }
   return { queries: all, tier: maxBurstTier };
 }
+
+// ─── Modo recurrente perpetuo ──────────────────────────────────────────────
+
+export interface RecurringInput {
+  /** Mapa query → época ms de última ejecución. Queries ausentes = nunca usadas. */
+  lastUsed: Map<string, number>;
+  /** Cuántas queries seleccionar este tick. */
+  count: number;
+  /** Cooldown mínimo en ms antes de reutilizar una query (default 7 días). */
+  cooldownMs?: number;
+}
+
+export interface RecurringSelection {
+  queries: Array<{ q: string; tier: number }>;
+}
+
+/**
+ * Selecciona `count` queries priorizando:
+ *   1. Queries nunca usadas (orden tier 1 → 8, orden de lista).
+ *   2. Queries con cooldown expirado, ordenadas por la más antigua primero.
+ *
+ * Nunca devuelve una lista vacía mientras existan queries en el catálogo:
+ * si todas están en cooldown, devuelve las más antiguas igualmente
+ * (prefiriendo reciclar antes que no hacer nada).
+ */
+export function pickRecurringQueries(input: RecurringInput): RecurringSelection {
+  const cooldownMs = input.cooldownMs ?? 7 * 24 * 3600_000;
+  const now = Date.now();
+
+  const never: Array<{ q: string; tier: number }> = [];
+  const expired: Array<{ q: string; tier: number; lastMs: number }> = [];
+  const inCooldown: Array<{ q: string; tier: number; lastMs: number }> = [];
+
+  for (let tier = 1; tier <= MAX_TIER; tier++) {
+    for (const q of QUERIES_BY_TIER[tier] ?? []) {
+      const lastMs = input.lastUsed.get(q);
+      if (lastMs === undefined) {
+        never.push({ q, tier });
+      } else if (now - lastMs >= cooldownMs) {
+        expired.push({ q, tier, lastMs });
+      } else {
+        inCooldown.push({ q, tier, lastMs });
+      }
+    }
+  }
+
+  // Ordenar expired por más antigua primero (mayor tiempo sin usar)
+  expired.sort((a, b) => a.lastMs - b.lastMs);
+  inCooldown.sort((a, b) => a.lastMs - b.lastMs);
+
+  const pool = [
+    ...never.map(x => ({ q: x.q, tier: x.tier })),
+    ...expired.map(x => ({ q: x.q, tier: x.tier })),
+    ...inCooldown.map(x => ({ q: x.q, tier: x.tier })),
+  ];
+
+  return { queries: pool.slice(0, input.count) };
+}
