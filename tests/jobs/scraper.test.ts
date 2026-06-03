@@ -55,7 +55,7 @@ describe('runScraper', () => {
     const { runScraper } = await import('../../src/jobs/scraper.js');
     await runScraper(['taller mecánico Bilbao']);
 
-    expect(mockSearch).toHaveBeenCalledWith('taller mecánico Bilbao', expect.any(Number));
+    expect(mockSearch).toHaveBeenCalledWith('taller mecánico Bilbao');
     expect(mockUpsert).toHaveBeenCalled();
     expect(mockUpdate).toHaveBeenCalledWith('lead-1', expect.objectContaining({
       status: 'ANALYZED', web_issues: ['no_website'],

@@ -50,7 +50,7 @@ function extractCityFromQuery(query: string): string | null {
   return city.length >= 3 ? city : null;
 }
 
-export async function searchBusinesses(query: string, maxItems = 50): Promise<ApifyPlace[]> {
+export async function searchBusinesses(query: string, maxItems = 20): Promise<ApifyPlace[]> {
   const city = extractCityFromQuery(query);
   let run: { defaultDatasetId?: string | null };
   try {

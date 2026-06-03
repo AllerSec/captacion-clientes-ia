@@ -20,7 +20,8 @@
     "health:check": "tsx scripts/health-check.ts",
     "seed:variants": "tsx scripts/seed-variants.ts",
     "scraper:burst": "tsx -e \"import('./src/jobs/scraper.js').then(m => m.runScraperAuto())\"",
-    "firecrawl:smoke": "tsx scripts/firecrawl-smoke.ts"
+    "firecrawl:smoke": "tsx scripts/firecrawl-smoke.ts",
+    "inbox": "tsx scripts/zoho-inbox.ts"
   },
   "keywords": [],
   "author": "",

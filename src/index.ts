@@ -101,9 +101,15 @@ http.createServer(async (req, res) => {
   }
 }).listen(port, () => log.info({ port }, 'health+panel server up'));
 
-// SCRAPER: 07:00 ES every day
+// SCRAPER: 07:00 y 15:00 ES. El tick de mañana llena el pipeline para la mañana;
+// el tick de tarde rellena lo que se haya consumido antes del bloque 16:00-18:30.
 cron.schedule('0 7 * * *', async () => {
-  log.info('scraper auto tick');
+  log.info('scraper auto tick (morning)');
+  try { await runScraperAuto(); } catch (err) { log.error({ err }, 'scraper failed'); }
+}, { timezone: env.TZ });
+
+cron.schedule('0 15 * * *', async () => {
+  log.info('scraper auto tick (afternoon)');
   try { await runScraperAuto(); } catch (err) { log.error({ err }, 'scraper failed'); }
 }, { timezone: env.TZ });
 

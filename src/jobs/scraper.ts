@@ -14,12 +14,12 @@ import { burstQueries, pickRecurringQueries } from '../core/query-rotator.js';
 import { QUERIES_BY_TIER } from '../config/queries.js';
 
 // Buffer de cola: el scraper rellena cada mañana hasta dejar ~este nº de leads
-// READY_TO_SEND. Con un objetivo de ~30 envíos/día, 60 da ~2 días de colchón.
-const READY_TO_SEND_THRESHOLD = 60;
-// Cap de queries por tick. Solo ~3% de lo scrapeado acaba contactable (el resto
-// tiene web, sin email, o no se le encuentra email al enriquecer), así que para
-// producir ~30 contactables/día hacen falta ~30+ queries.
-const MAX_QUERIES_PER_TICK = 35;
+// READY_TO_SEND. Con un objetivo de ~30 envíos/día, 45 da ~1.5 días de colchón.
+const READY_TO_SEND_THRESHOLD = 45;
+// Cap de queries por tick. 15 queries × 20 items = 300 places/día.
+// ~3% acaba contactable → ~9 leads/día, suficiente para 5-10 envíos/día.
+// Ajustar al alza si el pipeline se vacía antes de las 24h.
+const MAX_QUERIES_PER_TICK = 15;
 // Cooldown por query: 7 días. Con ~343 queries en el catálogo, el sistema nunca
 // se agota: cuando todo está en cooldown, reutiliza las más antiguas primero.
 const QUERY_COOLDOWN_MS = 7 * 24 * 3600_000;
@@ -58,7 +58,7 @@ export async function runScraperAuto(): Promise<void> {
     let totalFetched = 0;
     for (const { q, tier } of queriesToRun) {
       try {
-        const places = await searchBusinesses(q, 50);
+        const places = await searchBusinesses(q);
         totalFetched += places.length;
         log.info({ query: q, tier, count: places.length }, 'fetched places');
         // Top 3 competidores CON web de esta query, en el orden devuelto por Apify
@@ -291,7 +291,7 @@ export async function runScraper(queries: string[]): Promise<void> {
   try {
     log.info({ queries }, 'starting scraper (manual mode)');
     for (const q of queries) {
-      const places = await searchBusinesses(q, 50);
+      const places = await searchBusinesses(q);
       const querySector = detectSector(q).sector;
       const topCompetitors = places
         .filter(p => p.website && p.website.trim().length > 0)
