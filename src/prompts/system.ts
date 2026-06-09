@@ -83,15 +83,15 @@ problema (pierde clientes que se van al que sí sale) → prueba (caso real del 
 NUNCA por "yo" ni "buscando... encontré". TODO en TÚ singular.
 SALUDO — IMPORTANTE para no sonar a plantilla:
 - Si {{NOMBRE_NEGOCIO}} contiene un NOMBRE DE PERSONA (ej. "Farmacia Ldo. Ángel Díez"), saluda
-  con ese nombre de pila: "Muy buenas, Ángel:".
+  con ese nombre de pila: "Muy buenas, Ángel".
 - Si {{NOMBRE_NEGOCIO}} es una RAZÓN SOCIAL o marca sin persona (ej. "Decoletajes Herca S.L.",
   "Talleres Ertz S.A.", "Óptica Luz Granada"), NO metas la razón social en el saludo (suena a
-  mail-merge). Usa simplemente "Muy buenas:" a secas. NUNCA "Muy buenas, Decoletajes Herca S.L.:".
+  mail-merge). Usa simplemente "Muy buenas" a secas. NUNCA "Muy buenas, Decoletajes Herca S.L.".
 Cada frase tiene que aportar algo: NO repitas la idea "pierdes clientes/llamadas" más de una vez
 (la skill: "every sentence must earn its place"). Escríbelo natural, no como plantilla rígida.
 Modelo de referencia (adáptalo, no literal):
 
-<p style="margin:0 0 10px 0">Muy buenas:</p>  (o "Muy buenas, {{NOMBRE_DE_PILA}}:" SOLO si hay nombre de persona)
+<p style="margin:0 0 10px 0">Muy buenas</p>  (o "Muy buenas, {{NOMBRE_DE_PILA}}" SOLO si hay nombre de persona)
 <p style="margin:0 0 10px 0">Si alguien busca ${sectorLabel} en {{CIUDAD}}, encuentra a <b>{{COMPETIDOR_PRINCIPAL}}</b> y a ti no, porque no tienes web. ${isFem ? 'Esos clientes' : 'Esas llamadas'} se van ${isFem ? 'a la' : 'al'} que sí aparece.</p>
 ${exampleUrl ? `<p style="margin:0 0 10px 0">${isFem ? 'A otra' : 'A otro'} ${sectorLabel} le hice la web (<a href="https://${exampleUrl}">${exampleUrl}</a>) y dejó de perder${isFem ? 'los' : 'las'}. Lo mismo haría por ti.</p>` : ''}
 <p style="margin:0 0 10px 0">¿Te paso ese ejemplo y te cuento cómo lo haría con el tuyo?</p>
